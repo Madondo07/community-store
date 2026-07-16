@@ -41,3 +41,35 @@ example
 # generated native folders
 /ios
 /android
+
+# System and temporary files
+AppData/
+Cookies/
+Local Settings/
+My Documents/
+NetHood/
+PrintHood/
+Recent/
+SendTo/
+Start Menu/
+Templates/
+.Trash-*
+$RECYCLE.BIN/
+
+# Temporary files
+*.tmp
+*.temp
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Windows junction points and shortcuts
+*.lnk
