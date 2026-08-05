@@ -1,56 +1,79 @@
-# Welcome to your Expo app 👋
+# Community Store
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A modern community marketplace built with Expo, React Native, TypeScript, and Supabase.
 
-## Get started
+This app provides a mobile-first marketplace experience for buyers, sellers, and administrators with intuitive listing discovery, checkout, messaging, and vendor onboarding.
 
-1. Install dependencies
+## Key features
 
-   ```bash
-   npm install
-   ```
+- Browse marketplace listings with search and filters
+- View product details, vendor profiles, and ratings
+- Add items to cart and complete checkout
+- Review purchase confirmation and rating flows
+- In-app messaging, notifications, and order tracking
+- Seller registration, verification, and profile management
+- Admin dashboard for marketplace oversight
+- Responsive tab-based navigation with Expo Router
+- Supabase integration for backend services and auth
 
-2. Start the app
+## Tech stack
 
-   ```bash
-   npx expo start
-   ```
+- Expo SDK 56
+- React Native 0.85
+- React 19
+- TypeScript
+- Expo Router
+- Supabase JS
+- Expo UI and Expo core libraries
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Getting started
 
 ```bash
-npm run reset-project
+npm install
+npm run start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Then choose an Expo client or platform option:
 
-### Other setup steps
+- Android emulator or device
+- iOS simulator or device
+- Web browser
+- Expo Go
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Available scripts
+
+- `npm run start` - start Expo with tunnel mode
+- `npm run start:local` - start Expo locally
+- `npm run android` - run the app on Android
+- `npm run ios` - run the app on iOS
+- `npm run web` - open the app in the browser
+- `npm run lint` - run Expo lint checks
+- `npm run reset-project` - reset starter files using scripts/reset-project.js
+
+## Project structure
+
+- `app/` - Expo Router pages and routes
+- `src/components/` - reusable UI components
+- `src/context/` - app context and providers
+- `src/data/` - mock data and fixtures
+- `src/hooks/` - custom React hooks
+- `src/lib/` - Supabase setup and utilities
+- `src/types/` - shared TypeScript types
+- `src/utils/` - helper utilities
+- `assets/` - icons, images, and static assets
+
+## Configuration
+
+Connect your Supabase backend in `src/lib/supabase.ts` and provide the required environment variables for authentication and data storage.
+
+## Notes
+
+- Uses file-based routing from Expo Router
+- TypeScript support is enabled via `tsconfig.json`
+- Designed as a starter marketplace app that can be extended with real backend services, payments, and notifications
 
 ## Learn more
 
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Expo docs: https://docs.expo.dev/
+- Supabase docs: https://supabase.com/docs
+- Expo Router docs: https://expo.github.io/router/docs

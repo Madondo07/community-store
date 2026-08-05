@@ -4,11 +4,13 @@
 
 // ─── User / Auth Types ──────────────────────────────────────────────────────
 
-export type UserRole = 'student' | 'faculty' | 'vendor' | 'resident' | 'admin';
+export type UserRole = "student" | "faculty" | "vendor" | "resident" | "admin";
 
 export interface UserProfile {
   id: string;
   email: string;
+  /** For demo/testing only — plaintext password for mock accounts */
+  password?: string;
   full_name: string;
   role: UserRole;
   avatar_url: string | null;
@@ -17,22 +19,30 @@ export interface UserProfile {
   // Vendor-specific
   business_name?: string;
   registration_number?: string;
-  verification_status?: 'pending' | 'approved' | 'rejected';
+  vendor_status?: "pending" | "approved" | "rejected";
+}
+
+// ─── Verified Badge Types ───────────────────────────────────────────────────
+
+/** Badge info derived from email domain (student/staff) or admin approval (vendor) */
+export interface VerifiedBadgeInfo {
+  label: "Student" | "Staff" | "Verified Seller";
+  color: string;
 }
 
 // ─── Listing Types ──────────────────────────────────────────────────────────
 
 export type ListingCategory =
-  | 'textbooks'
-  | 'electronics'
-  | 'furniture'
-  | 'clothing'
-  | 'services'
-  | 'other';
+  | "textbooks"
+  | "electronics"
+  | "furniture"
+  | "clothing"
+  | "services"
+  | "other";
 
-export type ListingCondition = 'new' | 'used';
+export type ListingCondition = "new" | "used";
 
-export type ListingStatus = 'active' | 'sold' | 'flagged' | 'removed';
+export type ListingStatus = "active" | "sold" | "flagged" | "removed";
 
 export interface Listing {
   id: string;
@@ -76,9 +86,14 @@ export interface CartItem {
 
 // ─── Order Types ────────────────────────────────────────────────────────────
 
-export type DeliveryMethod = 'campus_pickup' | 'vendor_delivery';
-export type PaymentMethod = 'payfast' | 'snapchat';
-export type OrderStatus = 'confirmed' | 'pending' | 'processing' | 'delivered' | 'cancelled';
+export type DeliveryMethod = "campus_pickup" | "vendor_delivery";
+export type PaymentMethod = "payfast" | "snapchat";
+export type OrderStatus =
+  | "confirmed"
+  | "pending"
+  | "processing"
+  | "delivered"
+  | "cancelled";
 
 export interface Order {
   id: string;
@@ -103,7 +118,7 @@ export interface OrderItem {
 
 // ─── Notification Types ─────────────────────────────────────────────────────
 
-export type NotificationType = 'order' | 'message' | 'review' | 'system';
+export type NotificationType = "order" | "message" | "review" | "system";
 
 export interface Notification {
   id: string;
@@ -120,7 +135,7 @@ export interface Notification {
 
 // ─── Bulletin Board Types ───────────────────────────────────────────────────
 
-export type BulletinCategory = 'events' | 'services' | 'lost_and_found';
+export type BulletinCategory = "events" | "services" | "lost_and_found";
 
 export interface BulletinPost {
   id: string;
@@ -173,5 +188,5 @@ export interface FlaggedItem {
   reason: string;
   reported_by: string;
   created_at: string;
-  status: 'pending' | 'reviewed' | 'approved' | 'removed';
+  status: "pending" | "reviewed" | "approved" | "removed";
 }

@@ -73,3 +73,6 @@ Thumbs.db
 
 # Windows junction points and shortcuts
 *.lnk
+
+#Supabase
+.env
