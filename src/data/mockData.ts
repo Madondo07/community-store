@@ -25,7 +25,7 @@ import type {
 
 export const MOCK_CURRENT_USER: UserProfile = {
   id: "u1",
-  email: "dumisane.m@mycput.ac.za",
+  email: "dumisane@mycput.ac.za",
   password: "password",
   full_name: "Dumisane Madondo",
   role: "student",

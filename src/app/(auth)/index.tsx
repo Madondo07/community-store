@@ -8,15 +8,15 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AuthInput, Button } from "@/components/ui";
 import { Colors, Radii, Shadows, Spacing, Typography } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
+import { MOCK_CURRENT_USER } from "@/data/mockData";
 import { useResponsive } from "@/hooks/useResponsive";
-import { supabase } from "@/lib/supabase";
 import type { UserProfile } from "@/types";
 
 export default function SignInScreen() {
@@ -26,6 +26,8 @@ export default function SignInScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const currentUser: UserProfile = MOCK_CURRENT_USER; // Mock current user data
 
   const handleSignIn = async () => {
     setError("");
@@ -37,7 +39,12 @@ export default function SignInScreen() {
 
     setLoading(true);
     try {
-      // 1. Authenticate with Supabase
+      // Bypass Supabase auth for development.
+      // TODO: re-enable real authentication once backend is ready.
+      dispatch({ type: "SIGN_IN", payload: currentUser });
+      router.replace("/(tabs)");
+
+      /*
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -46,17 +53,14 @@ export default function SignInScreen() {
 
       if (authError) {
         setError(authError.message);
-        setLoading(false);
         return;
       }
 
       if (!authData.user) {
         setError("Sign in failed. Please try again.");
-        setLoading(false);
         return;
       }
 
-      // 2. Fetch profile from profiles table
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
@@ -64,7 +68,6 @@ export default function SignInScreen() {
         .single();
 
       if (profileError || !profile) {
-        // Profile might not exist yet — build from auth metadata
         const meta = authData.user.user_metadata;
         const userProfile: UserProfile = {
           id: authData.user.id,
@@ -77,7 +80,6 @@ export default function SignInScreen() {
         };
         dispatch({ type: "SIGN_IN", payload: userProfile });
       } else {
-        // Map Supabase profile to our UserProfile type
         const userProfile: UserProfile = {
           id: profile.id,
           email: profile.email,
@@ -92,8 +94,8 @@ export default function SignInScreen() {
         };
         dispatch({ type: "SIGN_IN", payload: userProfile });
       }
-
       router.replace("/(tabs)");
+      */
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
     } finally {
