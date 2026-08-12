@@ -19,7 +19,7 @@ export interface UserProfile {
   // Vendor-specific
   business_name?: string;
   registration_number?: string;
-  vendor_status?: "pending" | "approved" | "rejected";
+  verification_status?: 'pending' | 'approved' | 'rejected';
 }
 
 // ─── Verified Badge Types ───────────────────────────────────────────────────
