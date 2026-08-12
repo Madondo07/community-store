@@ -77,7 +77,7 @@ export const MOCK_USERS: UserProfile[] = [
     is_verified: true,
     business_name: "Campus Tech Solutions",
     registration_number: "REG-2024-00123",
-    vendor_status: "approved",
+    verification_status: "approved",
     created_at: "2024-06-15T12:00:00Z",
   },
   {
@@ -120,7 +120,7 @@ export const MOCK_USERS: UserProfile[] = [
     is_verified: false,
     business_name: "Fresh Print Co.",
     registration_number: "REG-2025-00456",
-    vendor_status: "pending",
+    verification_status: "pending",
     created_at: "2026-07-01T10:00:00Z",
   },
 ];

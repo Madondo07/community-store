@@ -18,6 +18,7 @@ import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { supabase } from '@/lib/supabase';
+import {MOCK_CURRENT_USER} from '@/data/mockData';
 import type { UserProfile, UserRole } from '@/types';
 
 const ROLES: { key: UserRole; label: string; icon: typeof GraduationCap }[] = [
