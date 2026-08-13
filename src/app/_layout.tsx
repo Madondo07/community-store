@@ -49,6 +49,10 @@ export default function RootLayout() {
             options={{ presentation: "card" }}
           />
           <Stack.Screen
+            name="chat-thread"
+            options={{ presentation: "card" }}
+          />
+          <Stack.Screen
             name="settings"
             options={{ presentation: "card" }}
           />
