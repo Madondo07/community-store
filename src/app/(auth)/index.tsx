@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { Lock, Mail, User } from "lucide-react-native";
 import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,8 +16,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthInput, Button } from "@/components/ui";
 import { Colors, Radii, Shadows, Spacing, Typography } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
-import { MOCK_CURRENT_USER } from "@/data/mockData";
 import { useResponsive } from "@/hooks/useResponsive";
+import { supabase } from "@/lib/supabase";
 import type { UserProfile } from "@/types";
 
 export default function SignInScreen() {
@@ -26,8 +27,6 @@ export default function SignInScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  const currentUser: UserProfile = MOCK_CURRENT_USER; // Mock current user data
 
   const handleSignIn = async () => {
     setError("");
@@ -39,12 +38,6 @@ export default function SignInScreen() {
 
     setLoading(true);
     try {
-      // Bypass Supabase auth for development.
-      // TODO: re-enable real authentication once backend is ready.
-      dispatch({ type: "SIGN_IN", payload: currentUser });
-      router.replace("/(tabs)");
-
-      /*
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -90,17 +83,29 @@ export default function SignInScreen() {
           created_at: profile.created_at,
           business_name: profile.business_name,
           registration_number: profile.registration_number,
-          vendor_status: profile.verification_status,
+          verification_status: profile.verification_status,
         };
         dispatch({ type: "SIGN_IN", payload: userProfile });
       }
       router.replace("/(tabs)");
-      */
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert("Email required", "Enter your email address above first, then tap \"Forgot password?\" again.");
+      return;
+    }
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim());
+    if (resetError) {
+      Alert.alert("Error", resetError.message);
+      return;
+    }
+    Alert.alert("Check your email", `We've sent a password reset link to ${email.trim()}.`);
   };
 
   return (
@@ -150,7 +155,7 @@ export default function SignInScreen() {
                   error && !password.trim() ? "Password is required" : undefined
                 }
               />
-              <Pressable style={styles.forgotWrap}>
+              <Pressable style={styles.forgotWrap} onPress={handleForgotPassword}>
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </Pressable>
             </View>
@@ -176,7 +181,7 @@ export default function SignInScreen() {
               style={styles.linkWrap}
             >
               <Text style={styles.linkText}>
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Text style={styles.linkBold}>Create one</Text>
               </Text>
             </Pressable>

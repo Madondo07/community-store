@@ -28,6 +28,8 @@ import { AuthInput, Avatar, Button } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { updateProfile } from '@/lib/api/profiles';
+import { supabase } from '@/lib/supabase';
 
 // ── Section Component ──
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -101,13 +103,28 @@ export default function SettingsScreen() {
   const [promotions, setPromotions] = useState(false);
   const [bulletinAlerts, setBulletinAlerts] = useState(true);
 
-  const handleSaveProfile = () => {
-    dispatch({ type: 'UPDATE_PROFILE', payload: { full_name: fullName, email } });
-    setEditingProfile(false);
-    Alert.alert('Success', 'Profile updated successfully');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setSavingProfile(true);
+    try {
+      // Note: email here only updates the profiles row, not Supabase Auth's
+      // own email (that requires a separate supabase.auth.updateUser + email
+      // confirmation flow) — out of scope for this pass.
+      await updateProfile(user.id, { full_name: fullName });
+      dispatch({ type: 'UPDATE_PROFILE', payload: { full_name: fullName, email } });
+      setEditingProfile(false);
+      Alert.alert('Success', 'Profile updated successfully');
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not update profile.');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (newPw !== confirmPw) {
       Alert.alert('Error', 'Passwords do not match');
       return;
@@ -116,11 +133,20 @@ export default function SettingsScreen() {
       Alert.alert('Error', 'Password must be at least 8 characters');
       return;
     }
-    setEditingPassword(false);
-    setCurrentPw('');
-    setNewPw('');
-    setConfirmPw('');
-    Alert.alert('Success', 'Password updated successfully');
+    setSavingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPw });
+      if (error) throw error;
+      setEditingPassword(false);
+      setCurrentPw('');
+      setNewPw('');
+      setConfirmPw('');
+      Alert.alert('Success', 'Password updated successfully');
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not update password.');
+    } finally {
+      setSavingPassword(false);
+    }
   };
 
   const handleDeleteAccount = () => {
@@ -132,7 +158,11 @@ export default function SettingsScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
+            // Actually deleting the account/user data requires a service-role
+            // Edge Function (not available client-side) — for now this just
+            // signs the user out, same as "Sign Out" below.
+            await supabase.auth.signOut();
             dispatch({ type: 'SIGN_OUT' });
             router.replace('/(auth)');
           },
@@ -141,7 +171,8 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
     dispatch({ type: 'SIGN_OUT' });
     router.replace('/(auth)');
   };
@@ -200,7 +231,7 @@ export default function SettingsScreen() {
                   hint="Use your @cput.ac.za email"
                 />
                 <View style={sStyles.formActions}>
-                  <Button title="Save Changes" onPress={handleSaveProfile} size="sm" />
+                  <Button title="Save Changes" onPress={handleSaveProfile} loading={savingProfile} disabled={savingProfile} size="sm" />
                   <Button
                     title="Cancel"
                     variant="secondary"
@@ -249,7 +280,7 @@ export default function SettingsScreen() {
                   secureTextEntry
                 />
                 <View style={sStyles.formActions}>
-                  <Button title="Update Password" onPress={handleChangePassword} size="sm" />
+                  <Button title="Update Password" onPress={handleChangePassword} loading={savingPassword} disabled={savingPassword} size="sm" />
                   <Button
                     title="Cancel"
                     variant="secondary"

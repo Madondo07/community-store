@@ -1,12 +1,17 @@
-import React from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Bell, MessageCircle, Package, Star } from 'lucide-react-native';
 
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
-import type { NotificationType } from '@/types';
+import {
+  getMyNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@/lib/api/notifications';
+import type { Notification, NotificationType } from '@/types';
 
 const TYPE_ICONS: Record<NotificationType, typeof Package> = {
   order: Package,
@@ -16,41 +21,79 @@ const TYPE_ICONS: Record<NotificationType, typeof Package> = {
 };
 
 export default function NotificationsScreen() {
-  const { state, dispatch } = useApp();
+  const { state } = useApp();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    getMyNotifications()
+      .then(setNotifications)
+      .catch((err) => console.warn('Failed to load notifications:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const handleMarkAllRead = async () => {
+    if (!state.user) return;
+    try {
+      await markAllNotificationsRead(state.user.id);
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.warn('Failed to mark all read:', err);
+    }
+  };
+
+  const handlePress = async (item: Notification) => {
+    if (!item.is_read) {
+      try {
+        await markNotificationRead(item.id);
+        setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n)));
+      } catch (err) {
+        console.warn('Failed to mark notification read:', err);
+      }
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></Pressable>
         <Text style={styles.headerTitle}>Notifications</Text>
-        <Pressable onPress={() => dispatch({ type: 'MARK_ALL_NOTIFICATIONS_READ' })}>
+        <Pressable onPress={handleMarkAllRead}>
           <Text style={styles.markAll}>Mark all read</Text>
         </Pressable>
       </View>
 
-      <FlatList
-        data={state.notifications}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => {
-          const Icon = TYPE_ICONS[item.type];
-          return (
-            <Pressable
-              style={[styles.row, !item.is_read && styles.rowUnread]}
-              onPress={() => dispatch({ type: 'MARK_NOTIFICATION_READ', payload: item.id })}
-            >
-              {!item.is_read && <View style={styles.unreadDot} />}
-              <View style={styles.iconWrap}><Icon size={20} color={Colors.blue} /></View>
-              <View style={styles.rowContent}>
-                <Text style={styles.rowTitle}>{item.title}</Text>
-                <Text style={styles.rowBody} numberOfLines={2}>{item.body}</Text>
-                <Text style={styles.rowTime}>{new Date(item.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
-              </View>
-            </Pressable>
-          );
-        }}
-        ItemSeparatorComponent={() => <View style={styles.sep} />}
-        ListEmptyComponent={<View style={styles.empty}><Bell size={48} color={Colors.textTertiary} /><Text style={styles.emptyText}>No notifications</Text></View>}
-      />
+      {loading ? (
+        <View style={styles.empty}><ActivityIndicator size="large" color={Colors.navy} /></View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const Icon = TYPE_ICONS[item.type];
+            return (
+              <Pressable
+                style={[styles.row, !item.is_read && styles.rowUnread]}
+                onPress={() => handlePress(item)}
+              >
+                {!item.is_read && <View style={styles.unreadDot} />}
+                <View style={styles.iconWrap}><Icon size={20} color={Colors.blue} /></View>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowTitle}>{item.title}</Text>
+                  <Text style={styles.rowBody} numberOfLines={2}>{item.body}</Text>
+                  <Text style={styles.rowTime}>{new Date(item.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
+                </View>
+              </Pressable>
+            );
+          }}
+          ItemSeparatorComponent={() => <View style={styles.sep} />}
+          ListEmptyComponent={<View style={styles.empty}><Bell size={48} color={Colors.textTertiary} /><Text style={styles.emptyText}>No notifications</Text></View>}
+        />
+      )}
     </SafeAreaView>
   );
 }

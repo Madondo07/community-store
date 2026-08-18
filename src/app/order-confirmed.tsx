@@ -17,7 +17,7 @@ export default function OrderConfirmedScreen() {
         <Text style={styles.title}>Order Confirmed!</Text>
         {orderId && <Text style={styles.orderId}>Order {orderId}</Text>}
         <StatusBadge status="confirmed" />
-        <Text style={styles.body}>Thank you for your purchase. You'll receive a notification with pickup or delivery details.</Text>
+        <Text style={styles.body}>Thank you for your purchase. You&apos;ll receive a notification with pickup or delivery details.</Text>
         <View style={styles.actions}>
           <Button title="View Orders" onPress={() => router.replace('/(tabs)/profile')} fullWidth />
           <Button title="Continue Shopping" variant="secondary" onPress={() => router.replace('/(tabs)')} fullWidth />

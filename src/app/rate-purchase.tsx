@@ -1,21 +1,81 @@
-import React, { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { X } from 'lucide-react-native';
 
 import { Avatar, Button, StarRating } from '@/components/ui';
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
-import { MOCK_USERS } from '@/data/mockData';
+import { useApp } from '@/context/AppContext';
+import { getListing } from '@/lib/api/listings';
+import { createNotification } from '@/lib/api/notifications';
+import { createReview } from '@/lib/api/reviews';
+import type { Listing } from '@/types';
 
 export default function RatePurchaseScreen() {
-  const seller = MOCK_USERS[1]; // Thandi Nkosi
+  const { listingId } = useLocalSearchParams<{ listingId?: string }>();
+  const { state } = useApp();
+  const [listing, setListing] = useState<Listing | null>(null);
+  // Starts false (not loading) when there's no listingId to fetch at all.
+  const [loading, setLoading] = useState(!!listingId);
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    Alert.alert('Review Submitted', 'Thank you for your feedback!', [{ text: 'OK', onPress: () => router.back() }]);
+  useEffect(() => {
+    if (!listingId) return;
+    getListing(listingId)
+      .then(setListing)
+      .catch((err) => console.warn('Failed to load listing:', err))
+      .finally(() => setLoading(false));
+  }, [listingId]);
+
+  const seller = listing?.seller;
+
+  const handleSubmit = async () => {
+    if (!state.user || !listing || !seller) return;
+    setSubmitting(true);
+    try {
+      await createReview({
+        reviewer_id: state.user.id,
+        seller_id: seller.id,
+        listing_id: listing.id,
+        rating,
+        comment: review.trim() || null,
+      });
+
+      createNotification({
+        user_id: seller.id,
+        type: 'review',
+        title: 'New review on your listing',
+        body: `${state.user.full_name} left a ${rating}-star review on "${listing.title}".`,
+        target_screen: 'seller-profile',
+        target_id: seller.id,
+      }).catch((err) => console.warn('Failed to create review notification:', err));
+
+      Alert.alert('Review Submitted', 'Thank you for your feedback!', [{ text: 'OK', onPress: () => router.back() }]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not submit review.');
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={[styles.content, { justifyContent: 'center' }]}><ActivityIndicator size="large" color={Colors.navy} /></View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!listing || !seller) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={[styles.content, { justifyContent: 'center' }]}><Text>Purchase not found</Text></View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -42,7 +102,7 @@ export default function RatePurchaseScreen() {
           textAlignVertical="top"
         />
 
-        <Button title="Submit Review" onPress={handleSubmit} fullWidth size="lg" disabled={rating === 0} />
+        <Button title="Submit Review" onPress={handleSubmit} loading={submitting} fullWidth size="lg" disabled={rating === 0 || submitting} />
       </View>
     </SafeAreaView>
   );

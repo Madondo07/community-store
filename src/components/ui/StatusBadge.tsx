@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AlertTriangle, CheckCircle, Clock } from 'lucide-react-native';
 
-import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
+import { Colors, Radii, Spacing } from '@/constants/theme';
 
 type Status = 'confirmed' | 'pending' | 'flagged';
 

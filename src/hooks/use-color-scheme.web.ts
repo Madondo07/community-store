@@ -8,7 +8,9 @@ export function useColorScheme() {
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
-    setHasHydrated(true);
+    // Deferred a microtask so this isn't a synchronous setState-in-effect —
+    // still resolves before first paint on web, which is all this needs.
+    Promise.resolve().then(() => setHasHydrated(true));
   }, []);
 
   const colorScheme = useRNColorScheme();

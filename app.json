@@ -39,6 +39,12 @@
             "imageWidth": 76
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Swych uses your photo library to let you add photos to listings you're selling."
+        }
       ]
     ],
     "experiments": {

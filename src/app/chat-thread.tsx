@@ -16,6 +16,7 @@ import type { IMessage } from 'react-native-gifted-chat';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { createNotification } from '@/lib/api/notifications';
 import { supabase } from '@/lib/supabase';
 import { getVerifiedBadge } from '@/utils/verification';
 import type { UserProfile } from '@/types';
@@ -78,6 +79,22 @@ export default function ChatThreadScreen() {
       if (data) setLinkedListing(data);
     })();
   }, [listingId]);
+
+  // ── Map DB rows to GiftedChat format ─────────────────────────────────────
+
+  const mapMessages = useCallback(
+    (rows: { id: string; sender_id: string; content: string; created_at: string }[]): IMessage[] =>
+      rows.map((m) => ({
+        _id: m.id,
+        text: m.content,
+        createdAt: new Date(m.created_at),
+        user: {
+          _id: m.sender_id,
+          name: m.sender_id === uid ? (user?.full_name ?? 'Me') : otherUserName,
+        },
+      })),
+    [uid, user?.full_name, otherUserName],
+  );
 
   // ── Fetch messages + subscribe to realtime ───────────────────────────────
 
@@ -146,23 +163,7 @@ export default function ChatThreadScreen() {
         supabase.removeChannel(subscriptionRef.current);
       }
     };
-  }, [conversationId, uid]);
-
-  // ── Map DB rows to GiftedChat format ─────────────────────────────────────
-
-  function mapMessages(
-    rows: { id: string; sender_id: string; content: string; created_at: string }[]
-  ): IMessage[] {
-    return rows.map((m) => ({
-      _id: m.id,
-      text: m.content,
-      createdAt: new Date(m.created_at),
-      user: {
-        _id: m.sender_id,
-        name: m.sender_id === uid ? (user?.full_name ?? 'Me') : otherUserName,
-      },
-    }));
-  }
+  }, [conversationId, uid, mapMessages]);
 
   // ── Send ─────────────────────────────────────────────────────────────────
 
@@ -196,8 +197,19 @@ export default function ChatThreadScreen() {
           last_message_content: text,
         })
         .eq('id', conversationId);
+
+      if (params.otherUserId) {
+        createNotification({
+          user_id: params.otherUserId,
+          type: 'message',
+          title: `New message from ${user?.full_name ?? 'a user'}`,
+          body: text,
+          target_screen: 'chat-thread',
+          target_id: conversationId,
+        }).catch((err) => console.warn('Failed to create message notification:', err));
+      }
     },
-    [conversationId, uid]
+    [conversationId, uid, params.otherUserId, user?.full_name]
   );
 
   // ── Badge for other user ─────────────────────────────────────────────────

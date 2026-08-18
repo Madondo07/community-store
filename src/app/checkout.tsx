@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, MapPin, Square, SquareCheck, Truck } from 'lucide-react-native';
@@ -7,6 +7,8 @@ import { ArrowLeft, MapPin, Square, SquareCheck, Truck } from 'lucide-react-nati
 import { Button } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
+import { createNotification } from '@/lib/api/notifications';
+import { createOrder } from '@/lib/api/orders';
 import type { DeliveryMethod, PaymentMethod } from '@/types';
 
 export default function CheckoutScreen() {
@@ -14,25 +16,58 @@ export default function CheckoutScreen() {
   const [delivery, setDelivery] = useState<DeliveryMethod>('campus_pickup');
   const [payment, setPayment] = useState<PaymentMethod>('payfast');
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [placing, setPlacing] = useState(false);
 
   const deliveryFee = delivery === 'vendor_delivery' ? 50 : 0;
   const total = cartTotal + deliveryFee;
 
-  const handleConfirm = () => {
-    const order = {
-      id: `ORD-${Date.now()}`,
-      buyer_id: state.user?.id ?? 'u1',
-      items: state.cart.map((ci) => ({
-        listing_id: ci.listing.id, title: ci.listing.title, price: ci.listing.price,
-        quantity: ci.quantity, image: ci.listing.images[0],
-      })),
-      subtotal: cartTotal, delivery_fee: deliveryFee, total,
-      delivery_method: delivery, payment_method: payment,
-      status: 'confirmed' as const,
-      created_at: new Date().toISOString(),
-    };
-    dispatch({ type: 'ADD_ORDER', payload: order });
-    router.replace(`/order-confirmed?orderId=${order.id}`);
+  const handleConfirm = async () => {
+    if (!state.user) {
+      Alert.alert('Sign in required', 'Please sign in to place an order.');
+      return;
+    }
+    setPlacing(true);
+    try {
+      const order = await createOrder({
+        buyer_id: state.user.id,
+        items: state.cart,
+        deliveryMethod: delivery,
+        paymentMethod: payment,
+        subtotal: cartTotal,
+        deliveryFee,
+        total,
+      });
+      dispatch({ type: 'CLEAR_CART' });
+
+      createNotification({
+        user_id: state.user.id,
+        type: 'order',
+        title: 'Order Confirmed',
+        body: `Your order ${order.id} has been confirmed.`,
+        target_screen: 'order-confirmed',
+        target_id: order.id,
+      }).catch((err) => console.warn('Failed to create order notification:', err));
+
+      // Notify each distinct seller involved in this order of the new sale.
+      const sellerIds = new Set(state.cart.map((item) => item.listing.seller_id));
+      sellerIds.forEach((sellerId) => {
+        if (sellerId === state.user!.id) return;
+        createNotification({
+          user_id: sellerId,
+          type: 'order',
+          title: 'New sale!',
+          body: `One of your listings was just purchased in order ${order.id}.`,
+          target_screen: 'order-confirmed',
+          target_id: order.id,
+        }).catch((err) => console.warn('Failed to create seller notification:', err));
+      });
+
+      router.replace(`/order-confirmed?orderId=${order.id}`);
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not place order.');
+    } finally {
+      setPlacing(false);
+    }
   };
 
   return (
@@ -81,7 +116,8 @@ export default function CheckoutScreen() {
         <Button
           title={`Confirm Payment — R${total}`}
           onPress={handleConfirm}
-          disabled={!termsAccepted}
+          disabled={!termsAccepted || placing}
+          loading={placing}
           fullWidth
           size="lg"
         />

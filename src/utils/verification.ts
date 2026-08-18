@@ -14,7 +14,7 @@ import type { UserProfile, VerifiedBadgeInfo } from '@/types';
 export function getVerifiedBadge(user: UserProfile | undefined | null): VerifiedBadgeInfo | null {
   if (!user) return null;
 
-  const emailDomain = user.email.split('@')[1]?.toLowerCase();
+  const emailDomain = user.email?.split('@')[1]?.toLowerCase();
 
   // Students: @mycput.ac.za
   if (emailDomain === 'mycput.ac.za') {

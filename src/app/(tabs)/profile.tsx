@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Pressable,
@@ -25,15 +26,57 @@ import { Avatar, Button, StatusBadge, VerifiedBadge } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { deleteListing, getListingsBySeller, getListingsByIds } from '@/lib/api/listings';
+import { getMyOrders } from '@/lib/api/orders';
+import { supabase } from '@/lib/supabase';
 import { canPostListings } from '@/utils/verification';
+import type { Listing, Order } from '@/types';
 
 const TABS = ['Listings', 'Posts', 'Orders', 'Saved'] as const;
 
 export default function ProfileScreen() {
-  const { state, dispatch, userListings, wishlistListings } = useApp();
+  const { state, dispatch } = useApp();
   const { user } = state;
   const { isDesktop, contentMaxWidth, isWeb } = useResponsive();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>('Listings');
+  const [userListings, setUserListings] = useState<Listing[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [wishlistListings, setWishlistListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // No early setState here for the !user case — the component itself
+    // short-circuits to a "Sign In" view below when there's no user, so
+    // `loading` is never consulted in that branch.
+    if (!user) return;
+    Promise.all([
+      getListingsBySeller(user.id, { status: null }),
+      getMyOrders(),
+    ])
+      .then(([listings, myOrders]) => {
+        setUserListings(listings);
+        setOrders(myOrders);
+      })
+      .catch((err) => console.warn('Failed to load profile data:', err))
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  useEffect(() => {
+    // getListingsByIds([]) resolves to [] itself, so no need to special-case
+    // the empty-wishlist branch with a synchronous setState here.
+    getListingsByIds(state.wishlist)
+      .then(setWishlistListings)
+      .catch((err) => console.warn('Failed to load saved listings:', err));
+  }, [state.wishlist]);
+
+  const handleDeleteListing = async (id: string) => {
+    try {
+      await deleteListing(id);
+      setUserListings((prev) => prev.filter((l) => l.id !== id));
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not delete listing.');
+    }
+  };
 
   if (!user) {
     return (
@@ -62,7 +105,7 @@ export default function ProfileScreen() {
                 <View style={styles.listingActions}>
                   <Pressable hitSlop={8} accessibilityLabel="Edit"><Pencil size={18} color={Colors.textSecondary} /></Pressable>
                   <Pressable hitSlop={8} accessibilityLabel="Mark sold"><CheckCircle size={18} color={Colors.success} /></Pressable>
-                  <Pressable hitSlop={8} onPress={() => dispatch({ type: 'DELETE_LISTING', payload: listing.id })} accessibilityLabel="Delete">
+                  <Pressable hitSlop={8} onPress={() => handleDeleteListing(listing.id)} accessibilityLabel="Delete">
                     <Trash2 size={18} color={Colors.danger} />
                   </Pressable>
                 </View>
@@ -73,9 +116,9 @@ export default function ProfileScreen() {
           <View style={styles.emptyTab}><Text style={styles.emptyTabText}>No listings yet</Text></View>
         );
       case 'Orders':
-        return state.orders.length > 0 ? (
+        return orders.length > 0 ? (
           <View style={isDesktop ? styles.ordersGrid : undefined}>
-            {state.orders.map((order) => (
+            {orders.map((order) => (
               <View key={order.id} style={styles.orderCard}>
                 <View style={styles.orderTop}>
                   <Text style={styles.orderId}>{order.id}</Text>
@@ -83,8 +126,14 @@ export default function ProfileScreen() {
                 </View>
                 <Text style={styles.orderDate}>{new Date(order.created_at).toLocaleDateString('en-ZA')}</Text>
                 <Text style={styles.orderTotal}>R{order.total}</Text>
-                {order.status === 'confirmed' && (
-                  <Button title="Rate Purchase" variant="secondary" size="sm" onPress={() => router.push('/rate-purchase')} style={{ marginTop: Spacing.sm }} />
+                {order.status === 'confirmed' && order.items[0]?.listing_id && (
+                  <Button
+                    title="Rate Purchase"
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => router.push(`/rate-purchase?listingId=${order.items[0].listing_id}`)}
+                    style={{ marginTop: Spacing.sm }}
+                  />
                 )}
               </View>
             ))}
@@ -182,7 +231,9 @@ export default function ProfileScreen() {
           </View>
 
           {/* Tab Content */}
-          <View style={styles.tabContent}>{renderTabContent()}</View>
+          <View style={styles.tabContent}>
+            {loading ? <ActivityIndicator size="large" color={Colors.navy} /> : renderTabContent()}
+          </View>
 
           {/* Extra Actions */}
           <View style={[styles.extraActions, isDesktop && styles.extraActionsDesktop]}>
@@ -192,7 +243,7 @@ export default function ProfileScreen() {
             <Button
               title="Sign Out"
               variant="secondary"
-              onPress={() => { dispatch({ type: 'SIGN_OUT' }); router.replace('/(auth)'); }}
+              onPress={async () => { await supabase.auth.signOut(); dispatch({ type: 'SIGN_OUT' }); router.replace('/(auth)'); }}
               fullWidth={!isDesktop}
               style={{ borderColor: Colors.danger }}
             />

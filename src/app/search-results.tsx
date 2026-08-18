@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -6,16 +6,23 @@ import { ArrowLeft } from 'lucide-react-native';
 
 import { CategoryChip, ListingCard, SearchBar } from '@/components/ui';
 import { Colors, Spacing, Typography } from '@/constants/theme';
-import { MOCK_LISTINGS } from '@/data/mockData';
+import { getListings } from '@/lib/api/listings';
+import type { Listing } from '@/types';
 
 export default function SearchResultsScreen() {
   const params = useLocalSearchParams<{ query?: string; category?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
   const [selectedCategory, setSelectedCategory] = useState(params.category ?? '');
+  const [listings, setListings] = useState<Listing[]>([]);
+
+  useEffect(() => {
+    getListings()
+      .then(setListings)
+      .catch((err) => console.warn('Failed to load listings:', err));
+  }, []);
 
   const results = useMemo(() => {
-    return MOCK_LISTINGS.filter((l) => {
-      if (l.status !== 'active') return false;
+    return listings.filter((l) => {
       if (selectedCategory && l.category !== selectedCategory) return false;
       if (query) {
         const q = query.toLowerCase();
@@ -23,7 +30,7 @@ export default function SearchResultsScreen() {
       }
       return true;
     });
-  }, [query, selectedCategory]);
+  }, [listings, query, selectedCategory]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -19,34 +19,57 @@ import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { CATEGORIES } from '@/data/mockData';
 import { useResponsive } from '@/hooks/useResponsive';
+import { getListings } from '@/lib/api/listings';
+import { getUnreadNotificationCount } from '@/lib/api/notifications';
 import { canPostListings } from '@/utils/verification';
 import type { Listing } from '@/types';
-
-// Vendor seller IDs — their listings get the "Sponsored" badge
-const VENDOR_IDS = new Set(['u4']);
 
 interface GridItem extends Listing {
   _sponsored: boolean;
 }
 
 export default function HomeScreen() {
-  const { state, cartItemCount, unreadNotificationCount } = useApp();
+  const { state, cartItemCount } = useApp();
   const { gridColumns, isDesktop, isWeb, contentMaxWidth, useSidebarNav } = useResponsive();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchValue, setSearchValue] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Build grid data: sponsored items sorted to front, all same card
+  const loadListings = useCallback(async () => {
+    try {
+      const data = await getListings();
+      setListings(data);
+    } catch (err) {
+      console.warn('Failed to load listings:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    getListings()
+      .then(setListings)
+      .catch((err) => console.warn('Failed to load listings:', err));
+  }, []);
+
+  useEffect(() => {
+    const uid = state.user?.id;
+    (uid ? getUnreadNotificationCount(uid) : Promise.resolve(0))
+      .then(setUnreadCount)
+      .catch((err) => console.warn('Failed to load unread count:', err));
+  }, [state.user]);
+
+  // Build grid data: sponsored (vendor) items sorted to front
   const gridData = useMemo(() => {
-    const active = state.listings.filter(
-      (l) => l.status === 'active' && (selectedCategory === 'all' || l.category === selectedCategory)
+    const active = listings.filter(
+      (l) => selectedCategory === 'all' || l.category === selectedCategory
     );
 
     const sponsored: GridItem[] = [];
     const regular: GridItem[] = [];
 
     for (const l of active) {
-      if (VENDOR_IDS.has(l.seller_id) || l.seller?.role === 'vendor') {
+      if (l.seller?.role === 'vendor') {
         sponsored.push({ ...l, _sponsored: true });
       } else {
         regular.push({ ...l, _sponsored: false });
@@ -55,12 +78,13 @@ export default function HomeScreen() {
 
     // Sponsored first, then regular
     return [...sponsored, ...regular];
-  }, [state.listings, selectedCategory]);
+  }, [listings, selectedCategory]);
 
-  const onRefresh = useCallback(() => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
-  }, []);
+    await loadListings();
+    setRefreshing(false);
+  }, [loadListings]);
 
   const px = isDesktop ? Spacing['2xl'] : Spacing.lg;
 
@@ -99,7 +123,7 @@ export default function HomeScreen() {
               router.push('/(tabs)/messages');
             }} style={styles.iconBtn} accessibilityLabel="Messages">
               <MessageCircle size={Spacing.xl} color={Colors.navy} />
-              {unreadNotificationCount > 0 && <View style={styles.dot} />}
+              {unreadCount > 0 && <View style={styles.dot} />}
             </Pressable>
           )}
           <Pressable onPress={() => router.push('/cart')} style={styles.iconBtn} accessibilityLabel="Cart">
@@ -110,7 +134,7 @@ export default function HomeScreen() {
           </Pressable>
           <Pressable onPress={() => router.push('/notifications')} style={styles.iconBtn} accessibilityLabel="Notifications">
             <Bell size={Spacing.xl} color={Colors.navy} />
-            {unreadNotificationCount > 0 && <View style={styles.dot} />}
+            {unreadCount > 0 && <View style={styles.dot} />}
           </Pressable>
         </View>
       </View>
@@ -146,7 +170,7 @@ export default function HomeScreen() {
         {selectedCategory === 'all' ? 'All Listings' : CATEGORIES.find(c => c.key === selectedCategory)?.label ?? 'Listings'}
       </Text>
     </View>
-  ), [px, useSidebarNav, isDesktop, searchValue, selectedCategory, state.user, cartItemCount, unreadNotificationCount]);
+  ), [px, useSidebarNav, isDesktop, searchValue, selectedCategory, state.user, cartItemCount, unreadCount]);
 
   return (
     <SafeAreaView style={styles.safe} edges={isWeb ? [] : ['top']}>

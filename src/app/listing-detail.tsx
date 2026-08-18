@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Heart, Share2 } from 'lucide-react-native';
@@ -7,15 +7,56 @@ import { ArrowLeft, Heart, Share2 } from 'lucide-react-native';
 import { Button, CategoryChip, SellerCard, StarRating } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
-import { MOCK_LISTINGS } from '@/data/mockData';
 import { useResponsive } from '@/hooks/useResponsive';
+import { getOrCreateConversation } from '@/lib/api/conversations';
+import { getListing } from '@/lib/api/listings';
+import type { Listing } from '@/types';
 
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { dispatch, isWishlisted } = useApp();
+  const { state, dispatch, isWishlisted } = useApp();
   const { isDesktop, contentMaxWidth, isWeb } = useResponsive();
-  const listing = MOCK_LISTINGS.find((l) => l.id === id);
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    getListing(id)
+      .then(setListing)
+      .catch((err) => console.warn('Failed to load listing:', err))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const handleMessageSeller = async () => {
+    if (!listing) return;
+    if (!state.user) {
+      router.push('/(auth)');
+      return;
+    }
+    try {
+      const conversationId = await getOrCreateConversation(state.user.id, listing.seller_id, listing.id);
+      router.push({
+        pathname: '/chat-thread',
+        params: {
+          conversationId,
+          otherUserId: listing.seller_id,
+          otherUserName: listing.seller?.full_name ?? 'Seller',
+          listingId: listing.id,
+        },
+      });
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not start conversation.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.center}><ActivityIndicator size="large" color={Colors.navy} /></View>
+      </SafeAreaView>
+    );
+  }
 
   if (!listing) {
     return (
@@ -76,7 +117,7 @@ export default function ListingDetailScreen() {
           <Button
             title="Message Seller"
             variant="secondary"
-            onPress={() => Alert.alert('Message', 'Chat coming soon')}
+            onPress={handleMessageSeller}
             fullWidth
           />
         </View>
@@ -138,7 +179,7 @@ export default function ListingDetailScreen() {
           <Button
             title="Message Seller"
             variant="secondary"
-            onPress={() => Alert.alert('Message', 'Chat coming soon')}
+            onPress={handleMessageSeller}
             style={{ flex: 1 }}
           />
         </View>

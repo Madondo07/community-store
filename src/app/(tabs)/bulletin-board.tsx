@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar, MapPin, Megaphone, Search, Wrench } from 'lucide-react-native';
 
 import { CategoryChip } from '@/components/ui';
-import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
-import { BULLETIN_CATEGORIES, MOCK_BULLETIN_POSTS } from '@/data/mockData';
+import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
+import { BULLETIN_CATEGORIES } from '@/data/mockData';
 import { useResponsive } from '@/hooks/useResponsive';
+import { getBulletinPosts } from '@/lib/api/bulletin';
+import type { BulletinPost } from '@/types';
 
 const TYPE_ICONS: Record<string, typeof Calendar> = {
   events: Calendar,
@@ -17,11 +19,20 @@ const TYPE_ICONS: Record<string, typeof Calendar> = {
 export default function BulletinBoardTab() {
   const { isDesktop, contentMaxWidth, isWeb } = useResponsive();
   const [selectedCat, setSelectedCat] = useState('all');
+  const [posts, setPosts] = useState<BulletinPost[]>([]);
+  const [loading, setLoading] = useState(true);
   const padding = isDesktop ? Spacing['2xl'] : Spacing.lg;
 
+  useEffect(() => {
+    getBulletinPosts()
+      .then(setPosts)
+      .catch((err) => console.warn('Failed to load bulletin posts:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
   const filtered = selectedCat === 'all'
-    ? MOCK_BULLETIN_POSTS
-    : MOCK_BULLETIN_POSTS.filter((p) => p.category === selectedCat);
+    ? posts
+    : posts.filter((p) => p.category === selectedCat);
 
   return (
     <SafeAreaView style={styles.safe} edges={isWeb ? [] : ['top']}>
@@ -47,41 +58,45 @@ export default function BulletinBoardTab() {
         </ScrollView>
 
         {/* Posts */}
-        <FlatList
-          data={filtered}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.list, { paddingHorizontal: padding }]}
-          numColumns={isDesktop ? 2 : 1}
-          key={isDesktop ? 'grid' : 'list'}
-          columnWrapperStyle={isDesktop ? styles.gridRow : undefined}
-          renderItem={({ item }) => {
-            const Icon = TYPE_ICONS[item.category] ?? Megaphone;
-            return (
-              <View style={[styles.postCard, isDesktop && styles.postCardDesktop]}>
-                <View style={styles.postHeader}>
-                  <View style={styles.iconWrap}><Icon size={18} color={Colors.blue} /></View>
-                  <Text style={styles.postTitle} numberOfLines={1}>{item.title}</Text>
+        {loading ? (
+          <View style={styles.empty}><ActivityIndicator size="large" color={Colors.navy} /></View>
+        ) : (
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={[styles.list, { paddingHorizontal: padding }]}
+            numColumns={isDesktop ? 2 : 1}
+            key={isDesktop ? 'grid' : 'list'}
+            columnWrapperStyle={isDesktop ? styles.gridRow : undefined}
+            renderItem={({ item }) => {
+              const Icon = TYPE_ICONS[item.category] ?? Megaphone;
+              return (
+                <View style={[styles.postCard, isDesktop && styles.postCardDesktop]}>
+                  <View style={styles.postHeader}>
+                    <View style={styles.iconWrap}><Icon size={18} color={Colors.blue} /></View>
+                    <Text style={styles.postTitle} numberOfLines={1}>{item.title}</Text>
+                  </View>
+                  <Text style={styles.postBody} numberOfLines={2}>{item.body}</Text>
+                  <View style={styles.postMeta}>
+                    {item.location && (
+                      <View style={styles.metaItem}>
+                        <MapPin size={12} color={Colors.textTertiary} />
+                        <Text style={styles.metaText}>{item.location}</Text>
+                      </View>
+                    )}
+                    <Text style={styles.metaText}>{new Date(item.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}</Text>
+                  </View>
                 </View>
-                <Text style={styles.postBody} numberOfLines={2}>{item.body}</Text>
-                <View style={styles.postMeta}>
-                  {item.location && (
-                    <View style={styles.metaItem}>
-                      <MapPin size={12} color={Colors.textTertiary} />
-                      <Text style={styles.metaText}>{item.location}</Text>
-                    </View>
-                  )}
-                  <Text style={styles.metaText}>{new Date(item.created_at).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' })}</Text>
-                </View>
+              );
+            }}
+            ListEmptyComponent={
+              <View style={styles.empty}>
+                <Megaphone size={48} color={Colors.textTertiary} />
+                <Text style={styles.emptyText}>No posts in this category</Text>
               </View>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Megaphone size={48} color={Colors.textTertiary} />
-              <Text style={styles.emptyText}>No posts in this category</Text>
-            </View>
-          }
-        />
+            }
+          />
+        )}
       </View>
     </SafeAreaView>
   );

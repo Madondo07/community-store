@@ -18,7 +18,6 @@ import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { supabase } from '@/lib/supabase';
-import {MOCK_CURRENT_USER} from '@/data/mockData';
 import type { UserProfile, UserRole } from '@/types';
 
 const ROLES: { key: UserRole; label: string; icon: typeof GraduationCap }[] = [
@@ -30,7 +29,7 @@ const ROLES: { key: UserRole; label: string; icon: typeof GraduationCap }[] = [
 
 export default function RoleSelectScreen() {
   const { dispatch } = useApp();
-  const { isDesktop, isWeb } = useResponsive();
+  const { isDesktop } = useResponsive();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');

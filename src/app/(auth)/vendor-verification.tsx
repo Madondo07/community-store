@@ -1,17 +1,61 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Building2, FileText, Hash, Square, SquareCheck, Upload } from 'lucide-react-native';
+import * as DocumentPicker from 'expo-document-picker';
+import { Building2, FileText, Hash, Square, SquareCheck, Upload, X } from 'lucide-react-native';
 
 import { AuthInput, Button, StatusBadge } from '@/components/ui';
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
+import { useApp } from '@/context/AppContext';
+import { updateProfile } from '@/lib/api/profiles';
+import { uploadVerificationDoc } from '@/lib/api/storage';
 
 export default function VendorVerificationScreen() {
+  const { state, dispatch } = useApp();
   const [businessName, setBusinessName] = useState('');
   const [regNumber, setRegNumber] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [document, setDocument] = useState<{ uri: string; name: string; mimeType: string | null } | null>(null);
+
+  const handlePickDocument = async () => {
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['image/*', 'application/pdf'],
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setDocument({ uri: asset.uri, name: asset.name, mimeType: asset.mimeType ?? null });
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!state.user) {
+      Alert.alert('Sign in required', 'Please sign in to submit verification.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      if (document) {
+        await uploadVerificationDoc(document.uri, state.user.id, 'business-registration');
+      }
+      await updateProfile(state.user.id, {
+        business_name: businessName,
+        registration_number: regNumber,
+        verification_status: 'pending',
+      });
+      dispatch({
+        type: 'UPDATE_PROFILE',
+        payload: { business_name: businessName, registration_number: regNumber, verification_status: 'pending' },
+      });
+      setSubmitted(true);
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not submit verification.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (submitted) {
     return (
@@ -20,7 +64,7 @@ export default function VendorVerificationScreen() {
           <StatusBadge status="pending" />
           <Text style={styles.pendingTitle}>Verification Submitted</Text>
           <Text style={styles.pendingBody}>
-            Your business documents are under review. This typically takes 24-48 hours. You'll receive a notification once your account is verified.
+            Your business documents are under review. This typically takes 24-48 hours. You&apos;ll receive a notification once your account is verified.
           </Text>
           <Button
             title="Continue to App"
@@ -57,11 +101,25 @@ export default function VendorVerificationScreen() {
         />
 
         {/* Upload Zone */}
-        <View style={styles.uploadZone}>
-          <Upload size={32} color={Colors.textTertiary} />
-          <Text style={styles.uploadTitle}>Upload business documents</Text>
-          <Text style={styles.uploadHint}>PNG, JPG, or PDF — max 5MB</Text>
-        </View>
+        {document ? (
+          <Pressable style={styles.uploadZoneFilled} onPress={handlePickDocument}>
+            {document.mimeType?.startsWith('image/') ? (
+              <Image source={{ uri: document.uri }} style={styles.uploadThumb} />
+            ) : (
+              <FileText size={28} color={Colors.navy} />
+            )}
+            <Text style={styles.uploadFileName} numberOfLines={1}>{document.name}</Text>
+            <Pressable onPress={() => setDocument(null)} hitSlop={8} accessibilityLabel="Remove document">
+              <X size={18} color={Colors.textTertiary} />
+            </Pressable>
+          </Pressable>
+        ) : (
+          <Pressable style={styles.uploadZone} onPress={handlePickDocument}>
+            <Upload size={32} color={Colors.textTertiary} />
+            <Text style={styles.uploadTitle}>Upload business documents</Text>
+            <Text style={styles.uploadHint}>PNG, JPG, or PDF — max 5MB</Text>
+          </Pressable>
+        )}
 
         {/* Checkbox */}
         <Pressable
@@ -80,8 +138,9 @@ export default function VendorVerificationScreen() {
 
         <Button
           title="Submit for Review"
-          onPress={() => setSubmitted(true)}
-          disabled={!confirmed}
+          onPress={handleSubmit}
+          disabled={!confirmed || submitting}
+          loading={submitting}
           fullWidth
           size="lg"
         />
@@ -101,6 +160,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginBottom: Spacing.xl, backgroundColor: Colors.surface,
   },
+  uploadZoneFilled: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    borderWidth: 1.5, borderColor: Colors.navy, borderRadius: Radii.lg,
+    padding: Spacing.lg, marginBottom: Spacing.xl, backgroundColor: Colors.overlayLight,
+  },
+  uploadThumb: { width: 40, height: 40, borderRadius: Radii.sm },
+  uploadFileName: { ...Typography.bodySmall, color: Colors.textPrimary, flex: 1 },
   uploadTitle: { ...Typography.titleSm, color: Colors.textPrimary, marginTop: Spacing.md },
   uploadHint: { ...Typography.bodySmall, color: Colors.textTertiary, marginTop: Spacing.xs },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing['2xl'] },
