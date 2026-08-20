@@ -1,28 +1,68 @@
-import React, { useState } from 'react';
-import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 
 import { Avatar, Button, ListingCard, StarRating, VerifiedBadge } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
-import { MOCK_LISTINGS, MOCK_REVIEWS, MOCK_USERS } from '@/data/mockData';
+import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { getOrCreateConversation } from '@/lib/api/conversations';
+import { getListingsBySeller } from '@/lib/api/listings';
+import { getProfile } from '@/lib/api/profiles';
+import { getReviewsForSeller } from '@/lib/api/reviews';
+import type { Listing, Review, UserProfile } from '@/types';
 
 const TABS = ['Listings', 'Reviews'] as const;
 
 export default function SellerProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const seller = MOCK_USERS.find((u) => u.id === id);
+  const { state } = useApp();
+  const [seller, setSeller] = useState<UserProfile | null>(null);
+  const [sellerListings, setSellerListings] = useState<Listing[]>([]);
+  const [sellerReviews, setSellerReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>('Listings');
-  const { isDesktop, contentMaxWidth, isWeb } = useResponsive();
+  const { contentMaxWidth, isWeb } = useResponsive();
+
+  useEffect(() => {
+    if (!id) return;
+    Promise.all([getProfile(id), getListingsBySeller(id), getReviewsForSeller(id)])
+      .then(([p, listings, reviews]) => {
+        setSeller(p);
+        setSellerListings(listings);
+        setSellerReviews(reviews);
+      })
+      .catch((err) => console.warn('Failed to load seller profile:', err))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const handleMessageSeller = async () => {
+    if (!seller) return;
+    if (!state.user) {
+      router.push('/(auth)');
+      return;
+    }
+    try {
+      const conversationId = await getOrCreateConversation(state.user.id, seller.id);
+      router.push({
+        pathname: '/chat-thread',
+        params: { conversationId, otherUserId: seller.id, otherUserName: seller.full_name },
+      });
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not start conversation.');
+    }
+  };
+
+  if (loading) {
+    return <SafeAreaView style={styles.safe}><View style={styles.center}><ActivityIndicator size="large" color={Colors.navy} /></View></SafeAreaView>;
+  }
 
   if (!seller) {
     return <SafeAreaView style={styles.safe}><View style={styles.center}><Text>Seller not found</Text></View></SafeAreaView>;
   }
 
-  const sellerListings = MOCK_LISTINGS.filter((l) => l.seller_id === seller.id && l.status === 'active');
-  const sellerReviews = MOCK_REVIEWS.filter((r) => r.seller_id === seller.id);
   const avgRating = sellerReviews.length > 0 ? sellerReviews.reduce((s, r) => s + r.rating, 0) / sellerReviews.length : 0;
   const memberSince = new Date(seller.created_at).toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
 
@@ -86,7 +126,7 @@ export default function SellerProfileScreen() {
       </ScrollView>
 
       <View style={styles.bottomAction}>
-        <Button title="Message Seller" variant="secondary" onPress={() => Alert.alert('Chat', 'Chat coming soon')} fullWidth />
+        <Button title="Message Seller" variant="secondary" onPress={handleMessageSeller} fullWidth />
       </View>
     </SafeAreaView>
   );

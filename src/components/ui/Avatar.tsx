@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
 
 const SIZES = { sm: 32, md: 48, lg: 64, xl: 80 } as const;
 

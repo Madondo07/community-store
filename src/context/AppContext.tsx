@@ -1,26 +1,62 @@
 /**
  * Community Store — Global App Context
  *
- * Manages auth state, cart, and provides access to mock data.
- * In production, this would connect to Supabase for real-time data.
+ * Session/UI-only state: the signed-in user, cart, and wishlist. There are
+ * no `orders`/`listings` tables backing wishlist, and cart is intentionally
+ * client-only until checkout creates a real order — everything else
+ * (listings, orders, notifications, bulletin posts, reports) is fetched
+ * directly from Supabase by the screens that need it, via `src/lib/api/*`.
+ *
+ * Also owns session lifecycle: restoring `user`/`isAuthenticated` from the
+ * Supabase-persisted auth token on app start (the Supabase client already
+ * persists the token to AsyncStorage, but nothing previously read it back
+ * into app state, so every reload silently bounced an already-signed-in
+ * user back to the sign-in screen), reacting to sign-out from elsewhere
+ * (token expiry, another tab), and — on web only — signing out after a
+ * period of inactivity (mobile intentionally stays signed in indefinitely).
  */
 
-import React, { createContext, useContext, useMemo, useReducer } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
+import { Platform } from "react-native";
 
-import {
-  MOCK_CART,
-  MOCK_CURRENT_USER,
-  MOCK_LISTINGS,
-  MOCK_NOTIFICATIONS,
-  MOCK_ORDERS,
-} from "@/data/mockData";
-import type {
-  CartItem,
-  Listing,
-  Notification,
-  Order,
-  UserProfile,
-} from "@/types";
+import { supabase } from "@/lib/supabase";
+import type { CartItem, Listing, UserProfile } from "@/types";
+
+const WEB_INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const ACTIVITY_EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"] as const;
+
+async function fetchProfileAsUser(authUser: {
+  id: string;
+  email?: string | null;
+  created_at: string;
+}): Promise<UserProfile> {
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", authUser.id)
+    .single();
+
+  return {
+    id: authUser.id,
+    email: profile?.email ?? authUser.email ?? "",
+    full_name: profile?.full_name ?? "User",
+    role: profile?.role ?? "student",
+    avatar_url: profile?.avatar_url ?? null,
+    is_verified: profile?.is_verified ?? false,
+    created_at: profile?.created_at ?? authUser.created_at,
+    business_name: profile?.business_name,
+    registration_number: profile?.registration_number,
+    verification_status: profile?.verification_status,
+  };
+}
 
 // ─── State Shape ────────────────────────────────────────────────────────────
 
@@ -28,9 +64,6 @@ interface AppState {
   user: UserProfile | null;
   isAuthenticated: boolean;
   cart: CartItem[];
-  orders: Order[];
-  notifications: Notification[];
-  listings: Listing[];
   wishlist: string[]; // listing IDs
 }
 
@@ -38,9 +71,6 @@ const initialState: AppState = {
   user: null,
   isAuthenticated: false,
   cart: [],
-  orders: [],
-  notifications: [],
-  listings: MOCK_LISTINGS,
   wishlist: [],
 };
 
@@ -54,17 +84,7 @@ type AppAction =
   | { type: "REMOVE_FROM_CART"; payload: string }
   | { type: "UPDATE_CART_QTY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" }
-  | { type: "ADD_ORDER"; payload: Order }
-  | { type: "ADD_LISTING"; payload: Listing }
-  | {
-      type: "UPDATE_LISTING";
-      payload: { id: string; updates: Partial<Listing> };
-    }
-  | { type: "DELETE_LISTING"; payload: string }
-  | { type: "MARK_NOTIFICATION_READ"; payload: string }
-  | { type: "MARK_ALL_NOTIFICATIONS_READ" }
-  | { type: "TOGGLE_WISHLIST"; payload: string }
-  | { type: "LOAD_MOCK_DATA" };
+  | { type: "TOGGLE_WISHLIST"; payload: string };
 
 // ─── Reducer ────────────────────────────────────────────────────────────────
 
@@ -75,9 +95,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         user: action.payload,
         isAuthenticated: true,
-        cart: MOCK_CART,
-        orders: MOCK_ORDERS,
-        notifications: MOCK_NOTIFICATIONS,
       };
 
     case "SIGN_OUT":
@@ -133,50 +150,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case "CLEAR_CART":
       return { ...state, cart: [] };
 
-    case "ADD_ORDER":
-      return {
-        ...state,
-        orders: [action.payload, ...state.orders],
-        cart: [],
-      };
-
-    case "ADD_LISTING":
-      return {
-        ...state,
-        listings: [action.payload, ...state.listings],
-      };
-
-    case "UPDATE_LISTING":
-      return {
-        ...state,
-        listings: state.listings.map((l) =>
-          l.id === action.payload.id ? { ...l, ...action.payload.updates } : l,
-        ),
-      };
-
-    case "DELETE_LISTING":
-      return {
-        ...state,
-        listings: state.listings.filter((l) => l.id !== action.payload),
-      };
-
-    case "MARK_NOTIFICATION_READ":
-      return {
-        ...state,
-        notifications: state.notifications.map((n) =>
-          n.id === action.payload ? { ...n, is_read: true } : n,
-        ),
-      };
-
-    case "MARK_ALL_NOTIFICATIONS_READ":
-      return {
-        ...state,
-        notifications: state.notifications.map((n) => ({
-          ...n,
-          is_read: true,
-        })),
-      };
-
     case "TOGGLE_WISHLIST": {
       const id = action.payload;
       const exists = state.wishlist.includes(id);
@@ -188,17 +161,6 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
-    case "LOAD_MOCK_DATA":
-      return {
-        ...state,
-        user: MOCK_CURRENT_USER,
-        isAuthenticated: true,
-        cart: MOCK_CART,
-        orders: MOCK_ORDERS,
-        notifications: MOCK_NOTIFICATIONS,
-        listings: MOCK_LISTINGS,
-      };
-
     default:
       return state;
   }
@@ -209,19 +171,75 @@ function appReducer(state: AppState, action: AppAction): AppState {
 interface AppContextValue {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  // True until the initial Supabase session check completes — gates the
+  // root redirect so an already-signed-in user isn't bounced to sign-in.
+  initializing: boolean;
   // Convenience selectors
   cartItemCount: number;
   cartTotal: number;
-  unreadNotificationCount: number;
-  userListings: Listing[];
   isWishlisted: (listingId: string) => boolean;
-  wishlistListings: Listing[];
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const [initializing, setInitializing] = useState(true);
+
+  // ── Restore session on app start, react to sign-out elsewhere ──────────
+  useEffect(() => {
+    let cancelled = false;
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      const authUser = data.session?.user;
+      if (authUser && !cancelled) {
+        const userProfile = await fetchProfileAsUser(authUser);
+        if (!cancelled) dispatch({ type: "SIGN_IN", payload: userProfile });
+      }
+      if (!cancelled) setInitializing(false);
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        dispatch({ type: "SIGN_OUT" });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  // ── Web-only inactivity logout (mobile stays signed in indefinitely) ───
+  const isAuthenticatedRef = useRef(state.isAuthenticated);
+  useEffect(() => {
+    isAuthenticatedRef.current = state.isAuthenticated;
+  }, [state.isAuthenticated]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof window === "undefined") return;
+    if (!state.isAuthenticated) return;
+
+    let timer: ReturnType<typeof setTimeout>;
+    const handleTimeout = () => {
+      if (!isAuthenticatedRef.current) return;
+      supabase.auth.signOut();
+      dispatch({ type: "SIGN_OUT" });
+    };
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(handleTimeout, WEB_INACTIVITY_TIMEOUT_MS);
+    };
+
+    resetTimer();
+    ACTIVITY_EVENTS.forEach((evt) => window.addEventListener(evt, resetTimer));
+
+    return () => {
+      clearTimeout(timer);
+      ACTIVITY_EVENTS.forEach((evt) => window.removeEventListener(evt, resetTimer));
+    };
+  }, [state.isAuthenticated]);
 
   const value = useMemo<AppContextValue>(() => {
     const cartItemCount = state.cart.reduce(
@@ -232,29 +250,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       (sum, item) => sum + item.listing.price * item.quantity,
       0,
     );
-    const unreadNotificationCount = state.notifications.filter(
-      (n) => !n.is_read,
-    ).length;
-    const userListings = state.listings.filter(
-      (l) => l.seller_id === state.user?.id,
-    );
     const isWishlisted = (listingId: string) =>
       state.wishlist.includes(listingId);
-    const wishlistListings = state.listings.filter((l) =>
-      state.wishlist.includes(l.id),
-    );
 
     return {
       state,
       dispatch,
+      initializing,
       cartItemCount,
       cartTotal,
-      unreadNotificationCount,
-      userListings,
       isWishlisted,
-      wishlistListings,
     };
-  }, [state]);
+  }, [state, initializing]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

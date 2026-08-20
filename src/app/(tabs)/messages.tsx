@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -63,91 +63,94 @@ export default function MessagesScreen() {
 
   // ── Fetch conversations ──────────────────────────────────────────────────
 
-  const fetchConversations = useCallback(async () => {
-    if (!user || isPendingVendor) {
-      setLoading(false);
-      return;
-    }
+  useEffect(() => {
+    // Declared inside the effect (React's recommended data-fetching
+    // pattern) rather than as an outer useCallback, so the effect body
+    // isn't a bare call to a function defined elsewhere.
+    async function fetchConversations() {
+      // No setLoading(false) here — when there's no user or the vendor is
+      // pending, the component renders the "locked"/sign-in branch below
+      // instead of ever consulting `loading`.
+      if (!user || isPendingVendor) return;
 
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      const uid = session?.session?.user?.id ?? user.id;
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        const uid = session?.session?.user?.id ?? user.id;
 
-      // Fetch conversations where user is a participant
-      const { data: convos, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .or(`participant_one.eq.${uid},participant_two.eq.${uid}`)
-        .order('last_message_at', { ascending: false });
+        // Fetch conversations where user is a participant
+        const { data: convos, error } = await supabase
+          .from('conversations')
+          .select('*')
+          .or(`participant_one.eq.${uid},participant_two.eq.${uid}`)
+          .order('last_message_at', { ascending: false });
 
-      if (error) {
-        console.warn('Conversations fetch error:', error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!convos || convos.length === 0) {
-        setConversations([]);
-        setLoading(false);
-        return;
-      }
-
-      // Build enriched rows
-      const rows: ConversationRow[] = [];
-
-      for (const c of convos) {
-        const otherId = c.participant_one === uid ? c.participant_two : c.participant_one;
-
-        // Fetch other user profile
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, full_name, avatar_url, email, role, is_verified, verification_status')
-          .eq('id', otherId)
-          .single();
-
-        // Fetch listing title if linked
-        let listingTitle: string | null = null;
-        if (c.listing_id) {
-          const { data: listing } = await supabase
-            .from('listings')
-            .select('title')
-            .eq('id', c.listing_id)
-            .single();
-          listingTitle = listing?.title ?? null;
+        if (error) {
+          console.warn('Conversations fetch error:', error.message);
+          setLoading(false);
+          return;
         }
 
-        // Count unread messages (sent by the other participant, unread by me)
-        const { count } = await supabase
-          .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('conversation_id', c.id)
-          .eq('sender_id', otherId)
-          .is('read_at', null);
+        if (!convos || convos.length === 0) {
+          setConversations([]);
+          setLoading(false);
+          return;
+        }
 
-        rows.push({
-          id: c.id,
-          participant_one: c.participant_one,
-          participant_two: c.participant_two,
-          listing_id: c.listing_id,
-          last_message_at: c.last_message_at,
-          last_message_content: c.last_message_content,
-          other_user: profile ?? null,
-          listing_title: listingTitle,
-          unread_count: count ?? 0,
-        });
+        // Build enriched rows
+        const rows: ConversationRow[] = [];
+
+        for (const c of convos) {
+          const otherId = c.participant_one === uid ? c.participant_two : c.participant_one;
+
+          // Fetch other user profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url, email, role, is_verified, verification_status')
+            .eq('id', otherId)
+            .single();
+
+          // Fetch listing title if linked
+          let listingTitle: string | null = null;
+          if (c.listing_id) {
+            const { data: listing } = await supabase
+              .from('listings')
+              .select('title')
+              .eq('id', c.listing_id)
+              .single();
+            listingTitle = listing?.title ?? null;
+          }
+
+          // Count unread messages (sent by the other participant, unread by me)
+          const { count } = await supabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('conversation_id', c.id)
+            .eq('sender_id', otherId)
+            .is('read_at', null);
+
+          rows.push({
+            id: c.id,
+            participant_one: c.participant_one,
+            participant_two: c.participant_two,
+            listing_id: c.listing_id,
+            last_message_at: c.last_message_at,
+            last_message_content: c.last_message_content,
+            other_user: profile ?? null,
+            listing_title: listingTitle,
+            unread_count: count ?? 0,
+          });
+        }
+
+        setConversations(rows);
+      } catch (err) {
+        console.warn('Conversations fetch failed:', err);
+      } finally {
+        setLoading(false);
       }
-
-      setConversations(rows);
-    } catch (err) {
-      console.warn('Conversations fetch failed:', err);
-    } finally {
-      setLoading(false);
     }
-  }, [user, isPendingVendor]);
 
-  useEffect(() => {
     fetchConversations();
-  }, [fetchConversations]);
+  }, [user, isPendingVendor]);
 
   // ── Pending vendor gate ──────────────────────────────────────────────────
 

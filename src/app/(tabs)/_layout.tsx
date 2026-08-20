@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Megaphone, MessageCircle, Search, User } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
@@ -6,10 +7,19 @@ import { ResponsiveTabBar } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { getUnreadNotificationCount } from '@/lib/api/notifications';
 
 export default function TabsLayout() {
-  const { unreadNotificationCount } = useApp();
+  const { state } = useApp();
   const { sidebarOffset, useSidebarNav } = useResponsive();
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+
+  useEffect(() => {
+    const uid = state.user?.id;
+    (uid ? getUnreadNotificationCount(uid) : Promise.resolve(0))
+      .then(setUnreadNotificationCount)
+      .catch((err) => console.warn('Failed to load unread count:', err));
+  }, [state.user]);
 
   return (
     <View style={[styles.root, { paddingLeft: sidebarOffset }]}>

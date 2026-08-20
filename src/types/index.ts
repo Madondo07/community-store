@@ -190,3 +190,23 @@ export interface FlaggedItem {
   created_at: string;
   status: "pending" | "reviewed" | "approved" | "removed";
 }
+
+// ─── Report Types ───────────────────────────────────────────────────────────
+// Backed by the real `reports` table (supabase/migrations/0005_reports.sql).
+// Can target a listing, a user, or both.
+
+export type ReportStatus = "pending" | "reviewed" | "approved" | "removed";
+
+export interface Report {
+  id: string;
+  reported_by: string;
+  reported_listing_id: string | null;
+  reported_user_id: string | null;
+  reason: string;
+  status: ReportStatus;
+  created_at: string;
+  // Joined
+  listing?: Listing;
+  reported_user?: UserProfile;
+  reporter?: UserProfile;
+}

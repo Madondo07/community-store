@@ -1,15 +1,15 @@
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { X } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChip, ListingCard, SearchBar } from "@/components/ui";
 import { Colors, Radii, Spacing, Typography } from "@/constants/theme";
-import { useApp } from "@/context/AppContext";
 import { CATEGORIES } from "@/data/mockData";
 import { useResponsive } from "@/hooks/useResponsive";
+import { getListings } from "@/lib/api/listings";
 import type { Listing, ListingCondition } from "@/types";
 
 interface ActiveFilters {
@@ -26,7 +26,6 @@ const PRICE_RANGES = [
 ];
 
 export default function BrowseScreen() {
-  const { state } = useApp();
   const { isDesktop, isWeb, contentMaxWidth, gridColumns } = useResponsive();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilters>({
@@ -34,11 +33,18 @@ export default function BrowseScreen() {
     condition: null,
     priceRange: null,
   });
+  const [listings, setListings] = useState<Listing[]>([]);
+
+  useEffect(() => {
+    getListings()
+      .then(setListings)
+      .catch((err) => console.warn("Failed to load listings:", err));
+  }, []);
 
   const px = isDesktop ? Spacing["2xl"] : Spacing.lg;
 
   const filteredListings = useMemo(() => {
-    let results = state.listings.filter((l) => l.status === "active");
+    let results = listings;
     if (filters.category !== "all")
       results = results.filter((l) => l.category === filters.category);
     if (filters.condition)
@@ -58,7 +64,7 @@ export default function BrowseScreen() {
       );
     }
     return results;
-  }, [state.listings, filters, query]);
+  }, [listings, filters, query]);
 
   // Removable active filter chips
   const activeFilterChips = useMemo(() => {
@@ -241,7 +247,7 @@ export default function BrowseScreen() {
         )}
       </View>
     ),
-    [px, query, filters, filteredListings.length, activeFilterChips],
+    [px, query, filters, activeFilterChips],
   );
 
   return (
