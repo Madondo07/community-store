@@ -1,4 +1,3 @@
-import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
@@ -6,7 +5,7 @@ import { Colors } from '@/constants/theme';
 const SIZES = { sm: 32, md: 48, lg: 64, xl: 80 } as const;
 
 const BG_COLORS = [
-  '#003C71', '#0072CE', '#0198CD', '#059669',
+  '#2F4858', '#0072CE', '#8ED4D0', '#059669',
   '#D97706', '#7C3AED', '#DC2626', '#2563EB',
 ];
 

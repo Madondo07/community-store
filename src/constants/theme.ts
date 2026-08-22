@@ -15,9 +15,9 @@ import { Platform } from "react-native";
 
 export const Colors = {
   // CPUT brand blues
-  navy: "#003C71",
+  navy: "#2F4858",
   blue: "#0072CE",
-  teal: "#0198CD",
+  teal: "#8ED4D0",
 
   // Surfaces
   background: "#F5F6F8",
@@ -43,11 +43,11 @@ export const Colors = {
   borderFocused: "#0072CE",
   divider: "#F3F4F6",
   overlay: "rgba(0, 0, 0, 0.5)",
-  overlayLight: "rgba(0, 60, 113, 0.06)",
+  overlayLight: "rgba(47, 72, 88, 0.06)",
 
   // Tab bar
   tabInactive: "#9CA3AF",
-  tabActive: "#003C71",
+  tabActive: "#2F4858",
 } as const;
 
 // ─── Fonts ───────────────────────────────────────────────────────────────────
