@@ -18,9 +18,10 @@ export default function RootIndex() {
     );
   }
 
-  // If authenticated, go to tabs. Otherwise, go to auth.
+  // If authenticated, go to tabs — except admins, who land on their
+  // dashboard first (Visit Store from there gets them into the tabs).
   if (state.isAuthenticated) {
-    return <Redirect href="/(tabs)" />;
+    return <Redirect href={state.user?.role === 'admin' ? '/admin-dashboard' : '/(tabs)'} />;
   }
 
   return <Redirect href="/(auth)" />;

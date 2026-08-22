@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Heart, Share2 } from 'lucide-react-native';
 
-import { Button, CategoryChip, SellerCard, StarRating } from '@/components/ui';
+import { Button, CategoryChip, ListingImage, SellerCard, StarRating } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -68,6 +68,10 @@ export default function ListingDetailScreen() {
   }
 
   const dropPercent = getPriceDropPercent(listing);
+  const isOwnListing = !!state.user && listing.seller_id === state.user.id;
+  const isSold = listing.status === 'sold';
+  const addToCartLabel = isOwnListing ? 'Your Listing' : isSold ? 'Sold Out' : 'Add to Cart';
+  const addToCartDisabled = isOwnListing || isSold;
 
   const detailContent = (
     <>
@@ -124,19 +128,22 @@ export default function ListingDetailScreen() {
       {isDesktop && (
         <View style={styles.desktopActions}>
           <Button
-            title="Add to Cart"
+            title={addToCartLabel}
+            disabled={addToCartDisabled}
             onPress={() => {
               dispatch({ type: 'ADD_TO_CART', payload: listing });
               Alert.alert('Added', `${listing.title} added to cart`);
             }}
             fullWidth
           />
-          <Button
-            title="Message Seller"
-            variant="secondary"
-            onPress={handleMessageSeller}
-            fullWidth
-          />
+          {!isOwnListing && (
+            <Button
+              title="Message Seller"
+              variant="secondary"
+              onPress={handleMessageSeller}
+              fullWidth
+            />
+          )}
         </View>
       )}
     </>
@@ -168,13 +175,13 @@ export default function ListingDetailScreen() {
         {isDesktop ? (
           <View style={[styles.desktopRow, { maxWidth: contentMaxWidth, alignSelf: 'center' as const }]}>
             <View style={styles.desktopImageWrap}>
-              <Image source={{ uri: listing.images[0] }} style={styles.desktopImage} resizeMode="cover" />
+              <ListingImage uri={listing.images[0]} style={styles.desktopImageFill} iconSize={40} />
             </View>
             <View style={styles.desktopContent}>{detailContent}</View>
           </View>
         ) : (
           <>
-            <Image source={{ uri: listing.images[0] }} style={styles.image} resizeMode="cover" />
+            <ListingImage uri={listing.images[0]} style={styles.image} iconSize={40} />
             <View style={styles.dots}><View style={styles.dotActive} /></View>
             <View style={styles.content}>{detailContent}</View>
           </>
@@ -185,7 +192,8 @@ export default function ListingDetailScreen() {
       {!isDesktop && (
         <View style={styles.actions}>
           <Button
-            title="Add to Cart"
+            title={addToCartLabel}
+            disabled={addToCartDisabled}
             onPress={() => {
               dispatch({ type: 'ADD_TO_CART', payload: listing });
               Alert.alert('Added', `${listing.title} added to cart`);
@@ -193,12 +201,14 @@ export default function ListingDetailScreen() {
             fullWidth
             style={{ flex: 1 }}
           />
-          <Button
-            title="Message Seller"
-            variant="secondary"
-            onPress={handleMessageSeller}
-            style={{ flex: 1 }}
-          />
+          {!isOwnListing && (
+            <Button
+              title="Message Seller"
+              variant="secondary"
+              onPress={handleMessageSeller}
+              style={{ flex: 1 }}
+            />
+          )}
         </View>
       )}
     </SafeAreaView>
@@ -237,8 +247,14 @@ const styles = StyleSheet.create({
   actions: { flexDirection: 'row', gap: Spacing.md, padding: Spacing.xl, paddingBottom: Spacing['3xl'], borderTopWidth: 1, borderTopColor: Colors.border, backgroundColor: Colors.surface },
   // Desktop
   desktopRow: { flexDirection: 'row', gap: Spacing['3xl'], padding: Spacing['2xl'], paddingTop: Spacing['5xl'] },
-  desktopImageWrap: { flex: 1, maxWidth: 600 },
-  desktopImage: { width: '100%', aspectRatio: 1, borderRadius: Radii.lg, backgroundColor: Colors.surfaceAlt },
+  // aspectRatio lives on this wrapper (not the image inside it) — a
+  // flex:1 row child's own width is always reliably resolved by the
+  // flexbox layout, whereas an aspectRatio + percentage-width Image
+  // nested another level down inside that flex:1 chain intermittently
+  // resolved to zero height on web. The image/fallback below just fills
+  // whatever size this wrapper already settled on.
+  desktopImageWrap: { flex: 1, maxWidth: 600, aspectRatio: 1, borderRadius: Radii.lg, overflow: 'hidden', backgroundColor: Colors.surfaceAlt },
+  desktopImageFill: { width: '100%', height: '100%' },
   desktopContent: { flex: 1, minWidth: 300 },
   desktopActions: { gap: Spacing.md, marginTop: Spacing['2xl'] },
 });

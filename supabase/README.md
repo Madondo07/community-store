@@ -55,6 +55,61 @@ its admin policies are already live, and its own pre-flight check (no
 re-running it. Run the preflight query first; only re-run `0007` if that
 policy is confirmed missing.
 
+`0009` also added `listings.previous_price` + a trigger that captures the
+old price on a genuine price drop (and clears itself if price rises again)
+— the app shows a "-X%" badge purely from `previous_price > price`, no
+history table needed.
+
+`0010_seller_profile_sold_listings.sql` broadens the live
+`"Active listings are viewable by all authenticated users"` policy on
+`listings` to also allow `status = 'sold'`, so a seller's public profile
+can show sold listings (buyer trust / transaction history) — previously
+RLS hid any non-active listing from everyone but its own seller,
+regardless of what the client asked for. `flagged`/`removed` stay hidden
+from non-owners.
+
+`0011` re-asserts the `notifications` insert policy (safe to re-run if
+`0009` didn't fully land). `0012` adds a DB-level guard against buying
+your own listing, plus an auto "mark sold on purchase" trigger — both as
+triggers on `order_items`, not app code, since a client-side-only check
+is trivially bypassed and the buyer has no `UPDATE` grant on `listings`
+anyway.
+
+## Admin panel — deliberate scope for this phase
+
+`0013_admin_panel_foundations.sql` builds out the admin panel spec'd
+separately (bulletin posting locked to admin-only at the DB level,
+5 bulletin categories, vendor verification document path + mobile number
+capture, a `profiles.is_suspended` flag enforced on new listing creation).
+
+**Explicitly deferred, not forgotten:** that spec calls for
+"report-triggered visibility only" — admin should only see profile/listing
+detail tied to an active report or verification submission, no proactive
+full access. What's live today is broader: `"Admins can view and update
+any profile"` (`0009`) and the pre-existing `"Admins can update any
+listing"` grant unconditional full read/write on every row, because the
+stats dashboard's full counts and the vendor queue (needs every pending
+vendor, not just reported ones) depend on it. Narrowing this to
+report-scoped access is real future work — it needs the stats dashboard's
+counts to come from a `security definer` aggregate function instead of a
+plain row-count query, so the count itself doesn't depend on row-level
+visibility. Tracked here so it doesn't quietly become "how it's always
+been" — see the "Admin RLS scope" decision recorded in this project's
+conversation history for the explicit choice to defer it.
+
+Also deferred: `0013` did **not** touch `messages`' INSERT policy to add
+the same suspension guard `listings` got — the live policy's real
+name/exact `with_check` isn't confirmed (the listings one turned out to
+be `"Verified users can create listings"`, not the
+`"listings_insert_own"` the migration files describe, with extra
+vendor-verification logic baked in that a blind drop-and-recreate would
+have silently dropped). Run this first if you want that guard added:
+
+```sql
+select policyname, cmd, with_check from pg_policies
+where tablename = 'messages' and cmd = 'INSERT';
+```
+
 ## Capturing the pre-existing schema
 
 `profiles`, `listings`, `conversations`, `messages`, the `handle_new_user`

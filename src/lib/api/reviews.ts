@@ -5,7 +5,11 @@ import { unwrap } from './_shared';
 
 // email/vendor_status/created_at included so getVerifiedBadge()/
 // SellerCard work if a badge is ever rendered for the reviewer.
-const REVIEWER_JOIN = '*, reviewer:profiles(id,email,full_name,avatar_url,role,is_verified,vendor_status,created_at)';
+// `reviews` has two FKs to `profiles` (reviewer_id, seller_id), so the
+// embed must be disambiguated by FK constraint name — an unqualified
+// `reviewer:profiles(...)` throws "more than one relationship was found"
+// (same pattern already used in reports.ts's REPORT_JOIN).
+const REVIEWER_JOIN = '*, reviewer:profiles!reviews_reviewer_id_fkey(id,email,full_name,avatar_url,role,is_verified,vendor_status,created_at)';
 
 export async function getReviewsForSeller(sellerId: string): Promise<Review[]> {
   const res = await supabase

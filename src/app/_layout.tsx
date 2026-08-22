@@ -45,6 +45,10 @@ export default function RootLayout() {
             options={{ presentation: "card" }}
           />
           <Stack.Screen
+            name="bulletin-composer"
+            options={{ presentation: "modal" }}
+          />
+          <Stack.Screen
             name="search-results"
             options={{ presentation: "card" }}
           />

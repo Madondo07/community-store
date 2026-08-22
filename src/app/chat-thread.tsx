@@ -9,10 +9,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, BadgeCheck } from 'lucide-react-native';
+import { ArrowLeft, BadgeCheck, Send as SendIcon } from 'lucide-react-native';
 import { GiftedChat, Bubble, InputToolbar, Composer, Send } from 'react-native-gifted-chat';
 import type { IMessage } from 'react-native-gifted-chat';
 
+import { Avatar, ListingImage } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -41,7 +42,7 @@ export default function ChatThreadScreen() {
   const [messages, setMessages] = useState<IMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [otherProfile, setOtherProfile] = useState<UserProfile | null>(null);
-  const [linkedListing, setLinkedListing] = useState<{ title: string; price: number } | null>(null);
+  const [linkedListing, setLinkedListing] = useState<{ title: string; price: number; image: string | null } | null>(null);
   const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const uid = user?.id ?? '';
@@ -72,11 +73,11 @@ export default function ChatThreadScreen() {
     (async () => {
       const { data } = await supabase
         .from('listings')
-        .select('title, price')
+        .select('title, price, images')
         .eq('id', listingId)
         .single();
 
-      if (data) setLinkedListing(data);
+      if (data) setLinkedListing({ title: data.title, price: data.price, image: data.images?.[0] ?? null });
     })();
   }, [listingId]);
 
@@ -189,14 +190,21 @@ export default function ChatThreadScreen() {
         return;
       }
 
-      // Update conversation last_message
-      await supabase
+      // Update conversation last_message — this is what the inbox list
+      // (messages.tsx) reads for its preview text/time, so a silent
+      // failure here is exactly what makes a thread with real messages
+      // still show "No messages yet".
+      const { error: convError } = await supabase
         .from('conversations')
         .update({
           last_message_at: new Date().toISOString(),
           last_message_content: text,
         })
         .eq('id', conversationId);
+
+      if (convError) {
+        console.warn('Failed to update conversation preview:', convError.message);
+      }
 
       if (params.otherUserId) {
         createNotification({
@@ -263,11 +271,14 @@ export default function ChatThreadScreen() {
   );
 
   const renderSend = useCallback(
-    (props: any) => (
-      <Send {...props} containerStyle={styles.sendBtn}>
-        <Text style={styles.sendText}>Send</Text>
-      </Send>
-    ),
+    (props: any) => {
+      const hasText = !!props.text?.trim();
+      return (
+        <Send {...props} containerStyle={[styles.sendBtn, !hasText && styles.sendBtnDisabled]} disabled={!hasText}>
+          <SendIcon size={18} color={Colors.textInverse} />
+        </Send>
+      );
+    },
     []
   );
 
@@ -281,19 +292,24 @@ export default function ChatThreadScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
             <ArrowLeft size={Spacing['2xl']} color={Colors.navy} />
           </Pressable>
-          <View style={styles.headerCenter}>
-            <View style={styles.headerNameRow}>
-              <Text style={styles.headerName} numberOfLines={1}>{otherUserName}</Text>
-              {otherBadge && (
-                <BadgeCheck size={Spacing.lg} color={otherBadge.color} />
-              )}
-            </View>
-            {otherBadge && (
-              <Text style={[styles.headerBadgeLabel, { color: otherBadge.color }]}>
-                {otherBadge.label}
+          <Pressable
+            style={styles.headerCenter}
+            onPress={() => params.otherUserId && router.push(`/seller-profile?id=${params.otherUserId}`)}
+            accessibilityLabel={`View ${otherUserName}'s profile`}
+          >
+            <Avatar uri={otherProfile?.avatar_url} name={otherUserName} size="sm" />
+            <View style={styles.headerText}>
+              <View style={styles.headerNameRow}>
+                <Text style={styles.headerName} numberOfLines={1}>{otherUserName}</Text>
+                {otherBadge && (
+                  <BadgeCheck size={Spacing.lg} color={otherBadge.color} />
+                )}
+              </View>
+              <Text style={[styles.headerStatus, otherBadge && { color: otherBadge.color }]} numberOfLines={1}>
+                {otherBadge ? otherBadge.label : 'Tap to view profile'}
               </Text>
-            )}
-          </View>
+            </View>
+          </Pressable>
         </View>
 
         {/* Linked listing card */}
@@ -302,6 +318,7 @@ export default function ChatThreadScreen() {
             style={styles.listingCard}
             onPress={() => listingId && router.push(`/listing-detail?id=${listingId}`)}
           >
+            <ListingImage uri={linkedListing.image} style={styles.listingCardThumb} iconSize={16} />
             <View style={styles.listingCardContent}>
               <Text style={styles.listingCardTitle} numberOfLines={1}>{linkedListing.title}</Text>
               <Text style={styles.listingCardPrice}>R{linkedListing.price.toLocaleString()}</Text>
@@ -335,6 +352,16 @@ export default function ChatThreadScreen() {
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
+// RN's shadow* style props only render on iOS (`Shadows.sm` in
+// constants/theme.ts resolves to `{}` on web via Platform.select's
+// `default` branch) — react-native-web does understand a literal
+// `boxShadow`, so give web its own real shadow instead of the flat 1px
+// border lines that were reading as unfinished/unstyled.
+const CARD_SHADOW = Platform.select<Record<string, unknown>>({
+  web: { boxShadow: '0 1px 4px rgba(15, 23, 42, 0.08)' },
+  default: Shadows.sm,
+});
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   container: { flex: 1 },
@@ -346,14 +373,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     backgroundColor: Colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    zIndex: 2,
+    ...CARD_SHADOW,
   },
   backBtn: {
     padding: Spacing.xs,
     marginRight: Spacing.md,
   },
-  headerCenter: { flex: 1 },
+  headerCenter: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  headerText: { flex: 1 },
   headerNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -364,8 +397,9 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     flexShrink: 1,
   },
-  headerBadgeLabel: {
+  headerStatus: {
     ...Typography.bodySmall,
+    color: Colors.textTertiary,
     fontWeight: '500',
     marginTop: 1,
   },
@@ -383,6 +417,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     ...Shadows.sm,
+  },
+  listingCardThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.sm,
+    marginRight: Spacing.md,
   },
   listingCardContent: { flex: 1, gap: 2 },
   listingCardTitle: {
@@ -407,13 +447,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Input
+  // Input — a single pill-shaped bar (text field + round send button
+  // inside one continuous surface) rather than a plain text box with a
+  // text "Send" link beside it.
   inputToolbar: {
     backgroundColor: Colors.surface,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    zIndex: 2,
+    ...CARD_SHADOW,
   },
   inputPrimary: {
     alignItems: 'center',
@@ -422,24 +466,26 @@ const styles = StyleSheet.create({
     ...Typography.body,
     color: Colors.textPrimary,
     backgroundColor: Colors.surfaceAlt,
-    borderRadius: Radii.lg,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
     paddingHorizontal: Spacing.lg,
-    paddingTop: Platform.OS === 'ios' ? Spacing.sm : Spacing.xs,
-    paddingBottom: Platform.OS === 'ios' ? Spacing.sm : Spacing.xs,
+    paddingTop: Platform.OS === 'ios' ? Spacing.md : Spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? Spacing.md : Spacing.sm,
     marginRight: Spacing.sm,
+    marginLeft: 0,
+    minHeight: 44,
   },
   sendBtn: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: Colors.navy,
-    borderRadius: Radii.lg,
     marginBottom: Platform.OS === 'ios' ? 0 : Spacing.xs,
   },
-  sendText: {
-    ...Typography.bodySmall,
-    color: Colors.textInverse,
-    fontWeight: '600',
+  sendBtnDisabled: {
+    backgroundColor: Colors.border,
   },
 });

@@ -1,11 +1,12 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Heart, Star } from 'lucide-react-native';
 
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { getPriceDropPercent } from '@/utils/pricing';
 import type { Listing } from '@/types';
+import ListingImage from './ListingImage';
 
 interface ListingCardProps {
   listing: Listing;
@@ -17,6 +18,7 @@ export default function ListingCard({ listing, onPress }: ListingCardProps) {
   const isNew = listing.condition === 'new';
   const wishlisted = isWishlisted(listing.id);
   const dropPercent = getPriceDropPercent(listing);
+  const isSold = listing.status === 'sold';
 
   return (
     <Pressable
@@ -29,24 +31,31 @@ export default function ListingCard({ listing, onPress }: ListingCardProps) {
     >
       {/* Image — roughly 65-70% of card via aspectRatio */}
       <View style={styles.imageWrap}>
-        <Image
-          source={{ uri: listing.images[0] }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        <ListingImage uri={listing.images[0]} style={[styles.image, isSold && styles.imageSold]} iconSize={22} />
 
-        {/* Condition badge — top right */}
-        <View style={[styles.conditionBadge, isNew ? styles.conditionNew : styles.conditionUsed]}>
-          <Text style={[styles.conditionText, isNew ? styles.conditionTextNew : styles.conditionTextUsed]}>
-            {isNew ? 'New' : 'Used'}
-          </Text>
-        </View>
-
-        {/* Price-drop badge — below condition badge */}
-        {dropPercent != null && (
-          <View style={styles.dropBadge}>
-            <Text style={styles.dropText}>-{dropPercent}%</Text>
+        {/* Sold is the only badge shown when sold — same top-right slot
+            the condition badge normally occupies, condition/price-drop
+            badges are suppressed rather than stacked underneath it. */}
+        {isSold ? (
+          <View style={styles.soldBadge}>
+            <Text style={styles.soldBadgeText}>SOLD</Text>
           </View>
+        ) : (
+          <>
+            {/* Condition badge — top right */}
+            <View style={[styles.conditionBadge, isNew ? styles.conditionNew : styles.conditionUsed]}>
+              <Text style={[styles.conditionText, isNew ? styles.conditionTextNew : styles.conditionTextUsed]}>
+                {isNew ? 'New' : 'Used'}
+              </Text>
+            </View>
+
+            {/* Price-drop badge — below condition badge */}
+            {dropPercent != null && (
+              <View style={styles.dropBadge}>
+                <Text style={styles.dropText}>-{dropPercent}%</Text>
+              </View>
+            )}
+          </>
         )}
 
         {/* Wishlist heart */}
@@ -110,6 +119,27 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     aspectRatio: 5 / 4,
+  },
+  imageSold: {
+    opacity: 0.5,
+  },
+
+  // Sold badge — same top-right slot as the condition badge
+  soldBadge: {
+    position: 'absolute',
+    top: Spacing.xs,
+    right: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: Radii.sm,
+    backgroundColor: Colors.danger,
+  },
+  soldBadgeText: {
+    ...Typography.caption,
+    fontSize: 9,
+    lineHeight: 12,
+    color: Colors.textInverse,
+    fontWeight: '700',
   },
 
   // Condition badge — top right

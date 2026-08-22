@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -8,10 +8,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Lock, MessageCircle } from 'lucide-react-native';
 
-import { Avatar } from '@/components/ui';
+import { Avatar, ListingImage } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -31,6 +31,7 @@ interface ConversationRow {
   // Joined
   other_user: Pick<UserProfile, 'id' | 'full_name' | 'avatar_url' | 'email' | 'role' | 'is_verified' | 'vendor_status'> | null;
   listing_title: string | null;
+  listing_image: string | null;
   unread_count: number;
 }
 
@@ -62,95 +63,103 @@ export default function MessagesScreen() {
   const [loading, setLoading] = useState(true);
 
   // ── Fetch conversations ──────────────────────────────────────────────────
+  // Refetches every time this tab regains focus (not just on mount) — the
+  // last message, its timestamp, and the unread badge all live in this
+  // list's own snapshot, so returning from a chat thread you just read/sent
+  // in needs a fresh fetch or the row keeps showing stale "No messages yet" /
+  // stale unread counts until some unrelated remount happens to occur.
 
-  useEffect(() => {
-    // Declared inside the effect (React's recommended data-fetching
-    // pattern) rather than as an outer useCallback, so the effect body
-    // isn't a bare call to a function defined elsewhere.
-    async function fetchConversations() {
-      // No setLoading(false) here — when there's no user or the vendor is
-      // pending, the component renders the "locked"/sign-in branch below
-      // instead of ever consulting `loading`.
-      if (!user || isPendingVendor) return;
+  const fetchConversations = useCallback(async () => {
+    // No setLoading(false) here — when there's no user or the vendor is
+    // pending, the component renders the "locked"/sign-in branch below
+    // instead of ever consulting `loading`.
+    if (!user || isPendingVendor) return;
 
-      try {
-        const { data: session } = await supabase.auth.getSession();
-        const uid = session?.session?.user?.id ?? user.id;
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const uid = session?.session?.user?.id ?? user.id;
 
-        // Fetch conversations where user is a participant
-        const { data: convos, error } = await supabase
-          .from('conversations')
-          .select('*')
-          .or(`participant_one.eq.${uid},participant_two.eq.${uid}`)
-          .order('last_message_at', { ascending: false });
+      // Fetch conversations where user is a participant
+      const { data: convos, error } = await supabase
+        .from('conversations')
+        .select('*')
+        .or(`participant_one.eq.${uid},participant_two.eq.${uid}`)
+        .order('last_message_at', { ascending: false });
 
-        if (error) {
-          console.warn('Conversations fetch error:', error.message);
-          setLoading(false);
-          return;
-        }
-
-        if (!convos || convos.length === 0) {
-          setConversations([]);
-          setLoading(false);
-          return;
-        }
-
-        // Build enriched rows
-        const rows: ConversationRow[] = [];
-
-        for (const c of convos) {
-          const otherId = c.participant_one === uid ? c.participant_two : c.participant_one;
-
-          // Fetch other user profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url, email, role, is_verified, vendor_status')
-            .eq('id', otherId)
-            .single();
-
-          // Fetch listing title if linked
-          let listingTitle: string | null = null;
-          if (c.listing_id) {
-            const { data: listing } = await supabase
-              .from('listings')
-              .select('title')
-              .eq('id', c.listing_id)
-              .single();
-            listingTitle = listing?.title ?? null;
-          }
-
-          // Count unread messages (sent by the other participant, unread by me)
-          const { count } = await supabase
-            .from('messages')
-            .select('id', { count: 'exact', head: true })
-            .eq('conversation_id', c.id)
-            .eq('sender_id', otherId)
-            .is('read_at', null);
-
-          rows.push({
-            id: c.id,
-            participant_one: c.participant_one,
-            participant_two: c.participant_two,
-            listing_id: c.listing_id,
-            last_message_at: c.last_message_at,
-            last_message_content: c.last_message_content,
-            other_user: profile ?? null,
-            listing_title: listingTitle,
-            unread_count: count ?? 0,
-          });
-        }
-
-        setConversations(rows);
-      } catch (err) {
-        console.warn('Conversations fetch failed:', err);
-      } finally {
+      if (error) {
+        console.warn('Conversations fetch error:', error.message);
         setLoading(false);
+        return;
       }
-    }
 
-    fetchConversations();
+      if (!convos || convos.length === 0) {
+        setConversations([]);
+        setLoading(false);
+        return;
+      }
+
+      // Build enriched rows
+      const rows: ConversationRow[] = [];
+
+      for (const c of convos) {
+        const otherId = c.participant_one === uid ? c.participant_two : c.participant_one;
+
+        // Fetch other user profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, email, role, is_verified, vendor_status')
+          .eq('id', otherId)
+          .single();
+
+        // Fetch linked listing's snapshot (name + thumbnail) if this
+        // thread is about a specific product
+        let listingTitle: string | null = null;
+        let listingImage: string | null = null;
+        if (c.listing_id) {
+          const { data: listing } = await supabase
+            .from('listings')
+            .select('title, images')
+            .eq('id', c.listing_id)
+            .single();
+          listingTitle = listing?.title ?? null;
+          listingImage = listing?.images?.[0] ?? null;
+        }
+
+        // Count unread messages (sent by the other participant, unread by me)
+        const { count } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('conversation_id', c.id)
+          .eq('sender_id', otherId)
+          .is('read_at', null);
+
+        rows.push({
+          id: c.id,
+          participant_one: c.participant_one,
+          participant_two: c.participant_two,
+          listing_id: c.listing_id,
+          last_message_at: c.last_message_at,
+          last_message_content: c.last_message_content,
+          other_user: profile ?? null,
+          listing_title: listingTitle,
+          listing_image: listingImage,
+          unread_count: count ?? 0,
+        });
+      }
+
+      setConversations(rows);
+    } catch (err) {
+      console.warn('Conversations fetch failed:', err);
+    } finally {
+      setLoading(false);
+    }
   }, [user, isPendingVendor]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchConversations();
+    }, [fetchConversations]),
+  );
 
   // ── Pending vendor gate ──────────────────────────────────────────────────
 
@@ -258,7 +267,10 @@ export default function MessagesScreen() {
                     )}
                   </View>
                   {item.listing_title && (
-                    <Text style={styles.rowListing} numberOfLines={1}>{item.listing_title}</Text>
+                    <View style={styles.snapshotRow}>
+                      <ListingImage uri={item.listing_image} style={styles.snapshotThumb} iconSize={10} />
+                      <Text style={styles.rowListing} numberOfLines={1}>{item.listing_title}</Text>
+                    </View>
                   )}
                   <Text style={styles.rowMsg} numberOfLines={1}>
                     {item.last_message_content ?? 'No messages yet'}
@@ -325,10 +337,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.2,
   },
+  snapshotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  snapshotThumb: {
+    width: 16,
+    height: 16,
+    borderRadius: 3,
+  },
   rowListing: {
     ...Typography.bodySmall,
     color: Colors.textTertiary,
-    marginTop: 1,
+    flexShrink: 1,
   },
   rowMsg: {
     ...Typography.bodySmall,

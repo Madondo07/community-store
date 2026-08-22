@@ -4,6 +4,7 @@ export { default as Button } from './Button';
 export { default as CategoryChip } from './CategoryChip';
 export { default as ContentContainer } from './ContentContainer';
 export { default as ListingCard } from './ListingCard';
+export { default as ListingImage } from './ListingImage';
 export { default as ResponsiveTabBar } from './ResponsiveTabBar';
 export { default as RoleSelectCard } from './RoleSelectCard';
 export { default as SearchBar } from './SearchBar';

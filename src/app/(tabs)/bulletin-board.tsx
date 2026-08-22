@@ -1,34 +1,44 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Calendar, MapPin, Megaphone, Search, Wrench } from 'lucide-react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { Bell, Building2, Calendar, MapPin, Megaphone, PlusCircle, Search, Wrench } from 'lucide-react-native';
 
 import { CategoryChip } from '@/components/ui';
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
+import { useApp } from '@/context/AppContext';
 import { BULLETIN_CATEGORIES } from '@/data/mockData';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getBulletinPosts } from '@/lib/api/bulletin';
 import type { BulletinPost } from '@/types';
 
 const TYPE_ICONS: Record<string, typeof Calendar> = {
+  newsflash: Bell,
+  cts: Building2,
   events: Calendar,
   services: Wrench,
   lost_and_found: Search,
 };
 
 export default function BulletinBoardTab() {
+  const { state } = useApp();
   const { isDesktop, contentMaxWidth, isWeb } = useResponsive();
   const [selectedCat, setSelectedCat] = useState('all');
   const [posts, setPosts] = useState<BulletinPost[]>([]);
   const [loading, setLoading] = useState(true);
   const padding = isDesktop ? Spacing['2xl'] : Spacing.lg;
+  const isAdmin = state.user?.role === 'admin';
 
-  useEffect(() => {
-    getBulletinPosts()
-      .then(setPosts)
-      .catch((err) => console.warn('Failed to load bulletin posts:', err))
-      .finally(() => setLoading(false));
-  }, []);
+  // Refetches on focus (not just mount) so a post just made in the admin
+  // composer shows up immediately on returning to this tab.
+  useFocusEffect(
+    useCallback(() => {
+      getBulletinPosts()
+        .then(setPosts)
+        .catch((err) => console.warn('Failed to load bulletin posts:', err))
+        .finally(() => setLoading(false));
+    }, []),
+  );
 
   const filtered = selectedCat === 'all'
     ? posts
@@ -43,7 +53,18 @@ export default function BulletinBoardTab() {
             <Text style={styles.headerTitle}>Bulletin Board</Text>
             <Text style={styles.headerSub}>CPUT Newsflash</Text>
           </View>
-          <Megaphone size={22} color={Colors.teal} />
+          {isAdmin ? (
+            <Pressable
+              onPress={() => router.push('/bulletin-composer')}
+              style={styles.postBtn}
+              accessibilityLabel="New bulletin post"
+            >
+              <PlusCircle size={18} color={Colors.textInverse} />
+              <Text style={styles.postBtnText}>Post</Text>
+            </Pressable>
+          ) : (
+            <Megaphone size={22} color={Colors.teal} />
+          )}
         </View>
 
         {/* Categories */}
@@ -108,6 +129,16 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.md },
   headerTitle: { ...Typography.titleLg, color: Colors.navy },
   headerSub: { ...Typography.caption, color: Colors.teal, textTransform: 'none' as const, marginTop: 2 },
+  postBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    backgroundColor: Colors.navy,
+    borderRadius: Radii.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  postBtnText: { ...Typography.bodySmall, color: Colors.textInverse, fontWeight: '600' },
   chipRow: { paddingBottom: Spacing.md, gap: Spacing.sm },
   list: { paddingBottom: Spacing['4xl'] },
   gridRow: { gap: Spacing.md },

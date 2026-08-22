@@ -60,6 +60,8 @@ export default function SignInScreen() {
         .eq("id", authData.user.id)
         .single();
 
+      let signedInRole: string | undefined;
+
       if (profileError || !profile) {
         const meta = authData.user.user_metadata;
         const userProfile: UserProfile = {
@@ -71,6 +73,7 @@ export default function SignInScreen() {
           is_verified: false,
           created_at: authData.user.created_at,
         };
+        signedInRole = userProfile.role;
         dispatch({ type: "SIGN_IN", payload: userProfile });
       } else {
         const userProfile: UserProfile = {
@@ -85,9 +88,12 @@ export default function SignInScreen() {
           registration_number: profile.registration_number,
           vendor_status: profile.vendor_status,
         };
+        signedInRole = userProfile.role;
         dispatch({ type: "SIGN_IN", payload: userProfile });
       }
-      router.replace("/(tabs)");
+      // Admins land on their dashboard first, not the marketplace — a
+      // "Visit Store" button there gets them into the regular tabs.
+      router.replace(signedInRole === "admin" ? "/admin-dashboard" : "/(tabs)");
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
     } finally {

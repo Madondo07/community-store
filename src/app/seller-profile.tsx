@@ -28,7 +28,10 @@ export default function SellerProfileScreen() {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([getProfile(id), getListingsBySeller(id), getReviewsForSeller(id)])
+    // status: null — include sold listings, not just active ones, so a
+    // seller's profile shows real transaction history for buyer trust.
+    // RLS still hides flagged/removed listings from anyone but the owner.
+    Promise.all([getProfile(id), getListingsBySeller(id, { status: null }), getReviewsForSeller(id)])
       .then(([p, listings, reviews]) => {
         setSeller(p);
         setSellerListings(listings);

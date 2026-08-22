@@ -18,6 +18,8 @@ export const CATEGORIES = [
 
 export const BULLETIN_CATEGORIES = [
   { key: "all", label: "All" },
+  { key: "newsflash", label: "Newsflash" },
+  { key: "cts", label: "CTS" },
   { key: "events", label: "Events" },
   { key: "services", label: "Services" },
   { key: "lost_and_found", label: "Lost & Found" },

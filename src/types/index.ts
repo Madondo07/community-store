@@ -20,6 +20,11 @@ export interface UserProfile {
   business_name?: string;
   registration_number?: string;
   vendor_status?: 'pending' | 'verified' | 'rejected';
+  mobile_number?: string | null;
+  /** Storage path in the private 'verification-docs' bucket — resolve with getVerificationDocSignedUrl() before displaying. */
+  verification_document_path?: string | null;
+  // Trust & safety
+  is_suspended?: boolean;
 }
 
 // ─── Verified Badge Types ───────────────────────────────────────────────────
@@ -137,7 +142,7 @@ export interface Notification {
 
 // ─── Bulletin Board Types ───────────────────────────────────────────────────
 
-export type BulletinCategory = "events" | "services" | "lost_and_found";
+export type BulletinCategory = "newsflash" | "cts" | "events" | "services" | "lost_and_found";
 
 export interface BulletinPost {
   id: string;

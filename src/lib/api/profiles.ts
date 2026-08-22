@@ -59,3 +59,17 @@ export async function rejectVendor(userId: string): Promise<void> {
     .eq('id', userId);
   if (res.error) throw new Error(res.error.message);
 }
+
+/**
+ * Admin-only (RLS: "Admins can view and update any profile"). Blocks the
+ * user from creating new listings from that point on — see
+ * 0013_admin_panel_foundations.sql's is_suspended() enforcement. Existing
+ * sessions/content aren't otherwise affected; this isn't a full lockout.
+ */
+export async function setUserSuspended(userId: string, suspended: boolean): Promise<void> {
+  const res = await supabase
+    .from('profiles')
+    .update({ is_suspended: suspended })
+    .eq('id', userId);
+  if (res.error) throw new Error(res.error.message);
+}

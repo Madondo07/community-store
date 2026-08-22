@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,10 +18,11 @@ import {
   PlusCircle,
   Settings,
   ShieldCheck,
+  Store,
   Trash2,
 } from 'lucide-react-native';
 
-import { Avatar, Button, StatusBadge, VerifiedBadge } from '@/components/ui';
+import { Avatar, Button, ListingImage, StatusBadge, VerifiedBadge } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -110,7 +110,7 @@ export default function ProfileScreen() {
           <View style={isDesktop ? styles.listingsGrid : undefined}>
             {userListings.map((listing) => (
               <View key={listing.id} style={[styles.listingRow, isDesktop && styles.listingRowDesktop]}>
-                <Image source={{ uri: listing.images[0] }} style={styles.listingThumb} />
+                <ListingImage uri={listing.images[0]} style={styles.listingThumb} iconSize={18} />
                 <View style={styles.listingInfo}>
                   <Text style={styles.listingTitle} numberOfLines={1}>{listing.title}</Text>
                   <Text style={styles.listingPrice}>R{listing.price}</Text>
@@ -163,7 +163,7 @@ export default function ProfileScreen() {
           <View style={isDesktop ? styles.listingsGrid : undefined}>
             {wishlistListings.map((listing) => (
               <View key={listing.id} style={[styles.listingRow, isDesktop && styles.listingRowDesktop]}>
-                <Image source={{ uri: listing.images[0] }} style={styles.listingThumb} />
+                <ListingImage uri={listing.images[0]} style={styles.listingThumb} iconSize={18} />
                 <View style={styles.listingInfo}>
                   <Text style={styles.listingTitle} numberOfLines={1}>{listing.title}</Text>
                   <Text style={styles.listingPrice}>R{listing.price}</Text>
@@ -223,6 +223,20 @@ export default function ProfileScreen() {
               style={isDesktop ? { minWidth: 200 } : undefined}
             />
           </View>
+
+          {/* Become a Vendor — students only. Not required to sell (students
+              can already list items via "Sell an Item" above); this is the
+              opt-in upgrade to a verified business account. */}
+          {user.role === 'student' && (
+            <Button
+              title="Become a Vendor"
+              variant="secondary"
+              onPress={() => router.push('/(auth)/vendor-verification')}
+              fullWidth
+              size="md"
+              icon={<Store size={18} color={Colors.navy} />}
+            />
+          )}
 
           {/* Admin Dashboard Link — only for admin users */}
           {user.role === 'admin' && (

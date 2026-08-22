@@ -1,19 +1,23 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, ShieldAlert } from 'lucide-react-native';
+import { CheckCircle2, FileText, LogOut, Phone, ShieldAlert, ShieldCheck, Store } from 'lucide-react-native';
 
-import { Avatar, Button, StatCard, StatusBadge } from '@/components/ui';
+import { Avatar, Button, ListingImage, StatCard, StatusBadge } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
+import { useResponsive } from '@/hooks/useResponsive';
 import { createNotification } from '@/lib/api/notifications';
-import { approveVendor, getPendingVendors, rejectVendor } from '@/lib/api/profiles';
+import { approveVendor, getPendingVendors, rejectVendor, setUserSuspended } from '@/lib/api/profiles';
 import { getAdminStats, getReports, updateReportStatus } from '@/lib/api/reports';
-import type { AdminStats, Report, ReportStatus, UserProfile } from '@/types';
+import { getVerificationDocSignedUrl } from '@/lib/api/storage';
+import { supabase } from '@/lib/supabase';
+import type { AdminStats, Report, UserProfile } from '@/types';
 
 export default function AdminDashboardScreen() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
+  const { isDesktop } = useResponsive();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [pendingVendors, setPendingVendors] = useState<UserProfile[]>([]);
@@ -35,15 +39,105 @@ export default function AdminDashboardScreen() {
     if (state.user?.role === 'admin') load();
   }, [state.user, load]);
 
-  const handleAction = async (reportId: string, status: ReportStatus) => {
-    setActingOn(reportId);
+  // A report can target a listing, a user, or both — the user to act on
+  // for Warn/Suspend is whoever was reported, falling back to the
+  // listing's seller for a listing-only report.
+  const resolveTargetUserId = (report: Report): string | null =>
+    report.reported_user_id ?? report.listing?.seller_id ?? null;
+
+  const handleDismiss = async (report: Report) => {
+    setActingOn(report.id);
     try {
-      await updateReportStatus(reportId, status);
-      setReports((prev) => prev.filter((r) => r.id !== reportId));
+      await updateReportStatus(report.id, 'reviewed');
+      setReports((prev) => prev.filter((r) => r.id !== report.id));
     } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Could not update report.');
+      Alert.alert('Error', err.message ?? 'Could not dismiss report.');
     } finally {
       setActingOn(null);
+    }
+  };
+
+  const handleRemoveContent = async (report: Report) => {
+    setActingOn(report.id);
+    try {
+      // updateReportStatus already flips the listing's own status to
+      // 'removed' when the report targets a listing (soft delete — the
+      // row stays for record-keeping, Browse/Home just stop showing it).
+      await updateReportStatus(report.id, 'removed');
+      setReports((prev) => prev.filter((r) => r.id !== report.id));
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not remove content.');
+    } finally {
+      setActingOn(null);
+    }
+  };
+
+  const handleWarn = async (report: Report) => {
+    const targetId = resolveTargetUserId(report);
+    if (!targetId) {
+      Alert.alert('Error', 'No user to warn on this report.');
+      return;
+    }
+    setActingOn(report.id);
+    try {
+      await createNotification({
+        user_id: targetId,
+        type: 'system',
+        title: 'Warning from Community Store',
+        body: `You've received a warning regarding a report: "${report.reason}"`,
+      });
+      await updateReportStatus(report.id, 'reviewed');
+      setReports((prev) => prev.filter((r) => r.id !== report.id));
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not warn user.');
+    } finally {
+      setActingOn(null);
+    }
+  };
+
+  const handleSuspend = (report: Report) => {
+    const targetId = resolveTargetUserId(report);
+    if (!targetId) {
+      Alert.alert('Error', 'No user to suspend on this report.');
+      return;
+    }
+    Alert.alert(
+      'Suspend this user?',
+      'They will be blocked from creating new listings. Existing listings and messages are unaffected.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Suspend',
+          style: 'destructive',
+          onPress: async () => {
+            setActingOn(report.id);
+            try {
+              await setUserSuspended(targetId, true);
+              await createNotification({
+                user_id: targetId,
+                type: 'system',
+                title: 'Account suspended',
+                body: `Your account has been suspended following a report: "${report.reason}"`,
+              });
+              await updateReportStatus(report.id, 'reviewed');
+              setReports((prev) => prev.filter((r) => r.id !== report.id));
+            } catch (err: any) {
+              Alert.alert('Error', err.message ?? 'Could not suspend user.');
+            } finally {
+              setActingOn(null);
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleViewDocument = async (path: string) => {
+    try {
+      const url = await getVerificationDocSignedUrl(path);
+      await Linking.openURL(url);
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not open document.');
     }
   };
 
@@ -88,16 +182,33 @@ export default function AdminDashboardScreen() {
     );
   }
 
-  // Listing-flagging reports only — the dashboard's flagged queue is
-  // listing-focused; user reports would need a separate section.
-  const flaggedListingReports = reports.filter((r) => r.reported_listing_id && r.listing);
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    dispatch({ type: 'SIGN_OUT' });
+    router.replace('/(auth)');
+  };
+
+  const pendingActionCount = pendingVendors.length + reports.length;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></Pressable>
-        <Text style={styles.headerTitle}>Admin Dashboard</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.headerLeft}>
+          <Avatar uri={state.user.avatar_url} name={state.user.full_name} size="sm" />
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Admin Dashboard</Text>
+            <Text style={styles.headerSubtitle} numberOfLines={1}>Signed in as {state.user.full_name}</Text>
+          </View>
+        </View>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => router.push('/(tabs)')} style={styles.visitStoreBtn} accessibilityLabel="Visit store">
+            <Store size={16} color={Colors.navy} />
+            {isDesktop && <Text style={styles.visitStoreText}>Visit Store</Text>}
+          </Pressable>
+          <Pressable onPress={handleSignOut} style={styles.iconBtn} accessibilityLabel="Sign out">
+            <LogOut size={20} color={Colors.textSecondary} />
+          </Pressable>
+        </View>
       </View>
 
       {loading ? (
@@ -112,10 +223,25 @@ export default function AdminDashboardScreen() {
             <StatCard label="Users" value={stats?.active_users ?? 0} color={Colors.success} />
           </View>
 
+          {pendingActionCount === 0 && (
+            <View style={styles.allClear}>
+              <ShieldCheck size={32} color={Colors.success} />
+              <Text style={styles.allClearText}>All caught up — nothing needs your attention right now.</Text>
+            </View>
+          )}
+
           {/* Pending Vendors */}
-          <Text style={styles.sectionTitle}>Pending Vendor Approvals</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Pending Vendor Approvals</Text>
+            {pendingVendors.length > 0 && (
+              <View style={styles.countPill}><Text style={styles.countPillText}>{pendingVendors.length}</Text></View>
+            )}
+          </View>
           {pendingVendors.length === 0 && (
-            <Text style={styles.flaggedReason}>No pending vendor applications</Text>
+            <View style={styles.emptySection}>
+              <CheckCircle2 size={18} color={Colors.textTertiary} />
+              <Text style={styles.emptySectionText}>No pending vendor applications</Text>
+            </View>
           )}
           {pendingVendors.map((vendor) => (
             <View key={vendor.id} style={styles.flaggedCard}>
@@ -124,8 +250,23 @@ export default function AdminDashboardScreen() {
                 <View style={styles.flaggedInfo}>
                   <Text style={styles.flaggedTitle} numberOfLines={1}>{vendor.business_name ?? vendor.full_name}</Text>
                   <Text style={styles.flaggedReason}>{vendor.email}</Text>
+                  {vendor.mobile_number && (
+                    <View style={styles.inlineRow}>
+                      <Phone size={12} color={Colors.textTertiary} />
+                      <Text style={styles.flaggedReason}>{vendor.mobile_number}</Text>
+                    </View>
+                  )}
                   {vendor.registration_number && (
                     <Text style={styles.flaggedReason}>Reg. {vendor.registration_number}</Text>
+                  )}
+                  {vendor.verification_document_path && (
+                    <Pressable
+                      style={styles.inlineRow}
+                      onPress={() => handleViewDocument(vendor.verification_document_path!)}
+                    >
+                      <FileText size={12} color={Colors.blue} />
+                      <Text style={styles.docLink}>View submitted document</Text>
+                    </Pressable>
                   )}
                   <StatusBadge status="pending" />
                 </View>
@@ -150,48 +291,80 @@ export default function AdminDashboardScreen() {
             </View>
           ))}
 
-          {/* Flagged Items */}
-          <Text style={[styles.sectionTitle, { marginTop: Spacing.xl }]}>Flagged Listings</Text>
-          {flaggedListingReports.length === 0 && (
-            <Text style={styles.flaggedReason}>No pending reports</Text>
+          {/* Reports Queue — covers both reported listings and reported
+              users; only the specific reported content is shown, not the
+              reported user's other listings or message history. */}
+          <View style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>
+            <Text style={styles.sectionTitle}>Reports Queue</Text>
+            {reports.length > 0 && (
+              <View style={styles.countPill}><Text style={styles.countPillText}>{reports.length}</Text></View>
+            )}
+          </View>
+          {reports.length === 0 && (
+            <View style={styles.emptySection}>
+              <CheckCircle2 size={18} color={Colors.textTertiary} />
+              <Text style={styles.emptySectionText}>No pending reports</Text>
+            </View>
           )}
-          {flaggedListingReports.map((item) => (
-            <View key={item.id} style={styles.flaggedCard}>
-              <View style={styles.flaggedTop}>
-                <Image source={{ uri: item.listing!.images[0] }} style={styles.flaggedThumb} />
-                <View style={styles.flaggedInfo}>
-                  <Text style={styles.flaggedTitle} numberOfLines={1}>{item.listing!.title}</Text>
-                  <Text style={styles.flaggedReason}>{item.reason}</Text>
-                  <StatusBadge status={item.status === 'pending' ? 'pending' : 'flagged'} />
+          {reports.map((item) => {
+            const targetUser = item.reported_user;
+            return (
+              <View key={item.id} style={styles.flaggedCard}>
+                <View style={styles.flaggedTop}>
+                  {item.listing ? (
+                    <ListingImage uri={item.listing.images[0]} style={styles.flaggedThumb} iconSize={20} />
+                  ) : (
+                    <Avatar uri={targetUser?.avatar_url} name={targetUser?.full_name ?? 'User'} size="md" />
+                  )}
+                  <View style={styles.flaggedInfo}>
+                    <Text style={styles.flaggedTitle} numberOfLines={1}>
+                      {item.listing?.title ?? targetUser?.full_name ?? 'Reported user'}
+                    </Text>
+                    <Text style={styles.flaggedReason}>Reason: {item.reason}</Text>
+                    {item.reporter && (
+                      <Text style={styles.flaggedReason}>Reported by {item.reporter.full_name}</Text>
+                    )}
+                    <StatusBadge status="pending" />
+                  </View>
+                </View>
+                <View style={styles.flaggedActions}>
+                  <Button
+                    title="Dismiss"
+                    variant="secondary"
+                    size="sm"
+                    disabled={actingOn === item.id}
+                    onPress={() => handleDismiss(item)}
+                    style={{ flex: 1 }}
+                  />
+                  <Button
+                    title="Warn"
+                    size="sm"
+                    disabled={actingOn === item.id}
+                    onPress={() => handleWarn(item)}
+                    style={{ flex: 1 }}
+                  />
+                  {item.listing && (
+                    <Button
+                      title="Remove"
+                      variant="danger"
+                      size="sm"
+                      disabled={actingOn === item.id}
+                      onPress={() => handleRemoveContent(item)}
+                      style={{ flex: 1 }}
+                    />
+                  )}
+                  <Button
+                    title="Suspend"
+                    variant="danger"
+                    size="sm"
+                    disabled={actingOn === item.id}
+                    onPress={() => handleSuspend(item)}
+                    style={{ flex: 1 }}
+                  />
                 </View>
               </View>
-              <View style={styles.flaggedActions}>
-                <Button
-                  title="Review"
-                  variant="secondary"
-                  size="sm"
-                  disabled={actingOn === item.id}
-                  onPress={() => handleAction(item.id, 'reviewed')}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  title="Approve"
-                  size="sm"
-                  disabled={actingOn === item.id}
-                  onPress={() => handleAction(item.id, 'approved')}
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  title="Remove"
-                  variant="danger"
-                  size="sm"
-                  disabled={actingOn === item.id}
-                  onPress={() => handleAction(item.id, 'removed')}
-                  style={{ flex: 1 }}
-                />
-              </View>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -203,9 +376,62 @@ const styles = StyleSheet.create({
   denied: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.lg, padding: Spacing.xl },
   deniedTitle: { ...Typography.displayMd, color: Colors.danger },
   deniedBody: { ...Typography.body, color: Colors.textSecondary, textAlign: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.xl },
-  headerTitle: { ...Typography.titleLg, color: Colors.navy },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.lg,
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, flexShrink: 1 },
+  headerText: { flexShrink: 1 },
+  headerTitle: { ...Typography.titleMd, color: Colors.navy },
+  headerSubtitle: { ...Typography.bodySmall, color: Colors.textTertiary, marginTop: 1 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  visitStoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: Radii.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  visitStoreText: { ...Typography.bodySmall, color: Colors.navy, fontWeight: '600' },
+  iconBtn: { padding: Spacing.xs },
   scroll: { padding: Spacing.xl, paddingBottom: Spacing['4xl'] },
+  allClear: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.successLight,
+    borderRadius: Radii.md,
+    padding: Spacing.lg,
+    marginBottom: Spacing['2xl'],
+  },
+  allClearText: { ...Typography.bodySmall, color: Colors.success, flex: 1, fontWeight: '500' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
+  countPill: {
+    minWidth: 22,
+    height: 22,
+    paddingHorizontal: 6,
+    borderRadius: 11,
+    backgroundColor: Colors.overlayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countPillText: { ...Typography.caption, color: Colors.navy, fontWeight: '700' },
+  emptySection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.lg,
+  },
+  emptySectionText: { ...Typography.bodySmall, color: Colors.textTertiary },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, marginBottom: Spacing['2xl'] },
   sectionTitle: { ...Typography.titleMd, color: Colors.textPrimary, marginBottom: Spacing.md },
   flaggedCard: { backgroundColor: Colors.surface, borderRadius: Radii.md, padding: Spacing.lg, marginBottom: Spacing.md, ...Shadows.sm },
@@ -214,5 +440,7 @@ const styles = StyleSheet.create({
   flaggedInfo: { flex: 1, gap: Spacing.xs },
   flaggedTitle: { ...Typography.titleSm, color: Colors.textPrimary },
   flaggedReason: { ...Typography.bodySmall, color: Colors.textSecondary },
-  flaggedActions: { flexDirection: 'row', gap: Spacing.sm },
+  flaggedActions: { flexDirection: 'row', gap: Spacing.sm, flexWrap: 'wrap' },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  docLink: { ...Typography.bodySmall, color: Colors.blue, fontWeight: '600' },
 });

@@ -3,7 +3,7 @@ import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
-import { Building2, FileText, Hash, Square, SquareCheck, Upload, X } from 'lucide-react-native';
+import { Building2, FileText, Hash, Phone, Square, SquareCheck, Upload, X } from 'lucide-react-native';
 
 import { AuthInput, Button, StatusBadge } from '@/components/ui';
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
@@ -15,6 +15,7 @@ export default function VendorVerificationScreen() {
   const { state, dispatch } = useApp();
   const [businessName, setBusinessName] = useState('');
   const [regNumber, setRegNumber] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [confirmed, setConfirmed] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -37,18 +38,26 @@ export default function VendorVerificationScreen() {
     }
     setSubmitting(true);
     try {
+      // The uploaded path used to be discarded here — nothing persisted
+      // it, so an admin could never actually open what a vendor
+      // submitted. Now saved to profiles.verification_document_path.
+      let documentPath: string | undefined;
       if (document) {
-        await uploadVerificationDoc(document.uri, state.user.id, 'business-registration');
+        documentPath = await uploadVerificationDoc(document.uri, state.user.id, 'business-registration');
       }
-      await updateProfile(state.user.id, {
+      // role used to arrive as 'vendor' from sign-up metadata before this
+      // flow moved to post-signup (Profile → "Become a Vendor") — now this
+      // is what actually promotes the account from student to vendor.
+      const updates = {
+        role: 'vendor' as const,
         business_name: businessName,
         registration_number: regNumber,
-        vendor_status: 'pending',
-      });
-      dispatch({
-        type: 'UPDATE_PROFILE',
-        payload: { business_name: businessName, registration_number: regNumber, vendor_status: 'pending' },
-      });
+        mobile_number: mobileNumber,
+        vendor_status: 'pending' as const,
+        ...(documentPath ? { verification_document_path: documentPath } : {}),
+      };
+      await updateProfile(state.user.id, updates);
+      dispatch({ type: 'UPDATE_PROFILE', payload: updates });
       setSubmitted(true);
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Could not submit verification.');
@@ -95,9 +104,15 @@ export default function VendorVerificationScreen() {
         />
         <AuthInput
           icon={<Hash size={20} color={Colors.textTertiary} />}
-          placeholder="Registration Number"
+          placeholder="Registration Number (optional)"
           value={regNumber}
           onChangeText={setRegNumber}
+        />
+        <AuthInput
+          icon={<Phone size={20} color={Colors.textTertiary} />}
+          placeholder="Mobile Number"
+          value={mobileNumber}
+          onChangeText={setMobileNumber}
         />
 
         {/* Upload Zone */}
