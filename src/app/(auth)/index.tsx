@@ -83,7 +83,7 @@ export default function SignInScreen() {
           created_at: profile.created_at,
           business_name: profile.business_name,
           registration_number: profile.registration_number,
-          verification_status: profile.verification_status,
+          vendor_status: profile.vendor_status,
         };
         dispatch({ type: "SIGN_IN", payload: userProfile });
       }

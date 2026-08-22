@@ -29,7 +29,7 @@ interface ConversationRow {
   last_message_at: string | null;
   last_message_content: string | null;
   // Joined
-  other_user: Pick<UserProfile, 'id' | 'full_name' | 'avatar_url' | 'email' | 'role' | 'is_verified' | 'verification_status'> | null;
+  other_user: Pick<UserProfile, 'id' | 'full_name' | 'avatar_url' | 'email' | 'role' | 'is_verified' | 'vendor_status'> | null;
   listing_title: string | null;
   unread_count: number;
 }
@@ -56,7 +56,7 @@ export default function MessagesScreen() {
   const { isDesktop, contentMaxWidth, isWeb } = useResponsive();
 
   const user = state.user;
-  const isPendingVendor = user?.role === 'vendor' && user?.verification_status !== 'approved';
+  const isPendingVendor = user?.role === 'vendor' && user?.vendor_status !== 'verified';
 
   const [conversations, setConversations] = useState<ConversationRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -105,7 +105,7 @@ export default function MessagesScreen() {
           // Fetch other user profile
           const { data: profile } = await supabase
             .from('profiles')
-            .select('id, full_name, avatar_url, email, role, is_verified, verification_status')
+            .select('id, full_name, avatar_url, email, role, is_verified, vendor_status')
             .eq('id', otherId)
             .single();
 

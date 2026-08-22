@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Plus, X } from 'lucide-react-native';
 
@@ -9,21 +9,56 @@ import { Button, CategoryChip } from '@/components/ui';
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { CATEGORIES } from '@/data/mockData';
-import { createListing, updateListing } from '@/lib/api/listings';
+import { createListing, getListing, updateListing } from '@/lib/api/listings';
 import { uploadListingImage } from '@/lib/api/storage';
 import type { ListingCategory, ListingCondition } from '@/types';
 
 const MAX_PHOTOS = 4;
 
+/** Already-uploaded listing images are http(s) URLs; anything else (file://, ph://, content://, ...) is a local pick still waiting to be uploaded. */
+const isRemoteUrl = (uri: string) => uri.startsWith('http://') || uri.startsWith('https://');
+
 export default function NewListingScreen() {
   const { state } = useApp();
+  const { id } = useLocalSearchParams<{ id?: string }>();
+  const isEditMode = !!id;
+
+  const [loadingListing, setLoadingListing] = useState(isEditMode);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
+  const [originalPrice, setOriginalPrice] = useState<number | null>(null);
   const [category, setCategory] = useState('');
   const [condition, setCondition] = useState<ListingCondition>('used');
   const [photos, setPhotos] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    getListing(id)
+      .then((listing) => {
+        if (!listing) {
+          Alert.alert('Not found', 'This listing no longer exists.', [{ text: 'OK', onPress: () => router.back() }]);
+          return;
+        }
+        if (!state.user || listing.seller_id !== state.user.id) {
+          Alert.alert('Not allowed', 'You can only edit your own listings.', [{ text: 'OK', onPress: () => router.back() }]);
+          return;
+        }
+        setTitle(listing.title);
+        setDescription(listing.description);
+        setPrice(String(listing.price));
+        setOriginalPrice(listing.price);
+        setCategory(listing.category);
+        setCondition(listing.condition);
+        setPhotos(listing.images);
+      })
+      .catch((err) => {
+        Alert.alert('Error', err.message ?? 'Could not load listing.');
+        router.back();
+      })
+      .finally(() => setLoadingListing(false));
+  }, [id, state.user]);
 
   const handleAddPhoto = async () => {
     if (photos.length >= MAX_PHOTOS) {
@@ -49,7 +84,48 @@ export default function NewListingScreen() {
     setPhotos((prev) => prev.filter((p) => p !== uri));
   };
 
-  const handlePublish = async () => {
+  const handleSaveEdit = async (listingId: string) => {
+    const uploaded = await Promise.all(
+      photos.map((uri) => (isRemoteUrl(uri) ? uri : uploadListingImage(uri, state.user!.id, listingId))),
+    );
+    const placeholderImage = `https://placehold.co/400x400/003C71/FFFFFF?text=${encodeURIComponent(title.slice(0, 12))}`;
+
+    await updateListing(listingId, {
+      title,
+      description,
+      price: parseFloat(price) || 0,
+      category: category as ListingCategory,
+      condition,
+      images: uploaded.length === 0 ? [placeholderImage] : uploaded,
+    });
+
+    Alert.alert('Saved', 'Your listing has been updated', [{ text: 'OK', onPress: () => router.back() }]);
+  };
+
+  const handleCreate = async () => {
+    const placeholderImage = `https://placehold.co/400x400/003C71/FFFFFF?text=${encodeURIComponent(title.slice(0, 12))}`;
+
+    const listing = await createListing({
+      seller_id: state.user!.id,
+      title,
+      description,
+      price: parseFloat(price) || 0,
+      category: category as ListingCategory,
+      condition,
+      images: photos.length === 0 ? [placeholderImage] : [],
+    });
+
+    if (photos.length > 0) {
+      const uploadedUrls = await Promise.all(
+        photos.map((uri) => uploadListingImage(uri, state.user!.id, listing.id)),
+      );
+      await updateListing(listing.id, { images: uploadedUrls });
+    }
+
+    Alert.alert('Published!', 'Your listing is now live', [{ text: 'OK', onPress: () => router.back() }]);
+  };
+
+  const handleSubmit = async () => {
     if (!title || !price || !category) {
       Alert.alert('Missing fields', 'Please fill in title, price, and category');
       return;
@@ -60,38 +136,35 @@ export default function NewListingScreen() {
     }
     setPublishing(true);
     try {
-      const placeholderImage = `https://placehold.co/400x400/003C71/FFFFFF?text=${encodeURIComponent(title.slice(0, 12))}`;
-
-      const listing = await createListing({
-        seller_id: state.user.id,
-        title,
-        description,
-        price: parseFloat(price) || 0,
-        category: category as ListingCategory,
-        condition,
-        images: photos.length === 0 ? [placeholderImage] : [],
-      });
-
-      if (photos.length > 0) {
-        const uploadedUrls = await Promise.all(
-          photos.map((uri) => uploadListingImage(uri, state.user!.id, listing.id)),
-        );
-        await updateListing(listing.id, { images: uploadedUrls });
+      if (isEditMode) {
+        await handleSaveEdit(id);
+      } else {
+        await handleCreate();
       }
-
-      Alert.alert('Published!', 'Your listing is now live', [{ text: 'OK', onPress: () => router.back() }]);
     } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Could not publish listing.');
+      Alert.alert('Error', err.message ?? 'Could not save listing.');
     } finally {
       setPublishing(false);
     }
   };
 
+  const priceNum = parseFloat(price);
+  const showDropHint = isEditMode && originalPrice != null && !isNaN(priceNum) && priceNum > 0 && priceNum < originalPrice;
+  const dropHintPercent = showDropHint ? Math.round((1 - priceNum / originalPrice!) * 100) : 0;
+
+  if (loadingListing) {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.loadingCenter}><ActivityIndicator size="large" color={Colors.navy} /></View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>New Listing</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? 'Edit Listing' : 'New Listing'}</Text>
         <Pressable onPress={() => router.back()} accessibilityLabel="Close"><X size={24} color={Colors.textPrimary} /></Pressable>
       </View>
 
@@ -136,6 +209,11 @@ export default function NewListingScreen() {
           <Text style={styles.pricePrefix}>R</Text>
           <TextInput style={[styles.input, styles.priceInput]} value={price} onChangeText={setPrice} placeholder="0" placeholderTextColor={Colors.textTertiary} keyboardType="numeric" />
         </View>
+        {showDropHint && (
+          <Text style={styles.dropHint}>
+            🔻 Buyers will see a{dropHintPercent > 0 ? ` -${dropHintPercent}%` : ''} price-drop badge on this listing
+          </Text>
+        )}
 
         <Text style={styles.label}>Category</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
@@ -153,7 +231,15 @@ export default function NewListingScreen() {
           ))}
         </View>
 
-        <Button title="Publish Listing" onPress={handlePublish} loading={publishing} disabled={publishing} fullWidth size="lg" style={{ marginTop: Spacing.xl }} />
+        <Button
+          title={isEditMode ? 'Save Changes' : 'Publish Listing'}
+          onPress={handleSubmit}
+          loading={publishing}
+          disabled={publishing}
+          fullWidth
+          size="lg"
+          style={{ marginTop: Spacing.xl }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -161,6 +247,7 @@ export default function NewListingScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
+  loadingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.xl },
   headerTitle: { ...Typography.titleLg, color: Colors.navy },
   scroll: { padding: Spacing.xl, paddingBottom: Spacing['4xl'] },
@@ -179,6 +266,7 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: 'row', alignItems: 'center' },
   pricePrefix: { ...Typography.titleLg, color: Colors.navy, marginRight: Spacing.sm },
   priceInput: { flex: 1 },
+  dropHint: { ...Typography.bodySmall, color: Colors.success, marginTop: Spacing.sm, fontWeight: '600' },
   chipScroll: { marginBottom: Spacing.sm },
   conditionRow: { flexDirection: 'row', gap: Spacing.md },
   conditionBtn: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center', borderRadius: Radii.md, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface },

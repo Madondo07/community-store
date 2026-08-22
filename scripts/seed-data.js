@@ -51,7 +51,7 @@ const PERSONAS = [
   {
     email: "prof.vanwyk.seed@cput.ac.za",
     full_name: "Prof. Johan van Wyk",
-    role: "faculty",
+    role: "student",
     listings: [
       {
         title: "Engineering Drawing Board A2",
@@ -70,7 +70,7 @@ const PERSONAS = [
   {
     email: "sipho.d.seed@gmail.com",
     full_name: "Sipho Dlamini",
-    role: "resident",
+    role: "student",
     listings: [
       {
         title: "IKEA Study Desk — White",

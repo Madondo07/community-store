@@ -6,20 +6,24 @@ import { ArrowLeft } from 'lucide-react-native';
 
 import { CategoryChip, ListingCard, SearchBar } from '@/components/ui';
 import { Colors, Spacing, Typography } from '@/constants/theme';
+import { useApp } from '@/context/AppContext';
 import { getListings } from '@/lib/api/listings';
 import type { Listing } from '@/types';
 
 export default function SearchResultsScreen() {
+  const { state } = useApp();
   const params = useLocalSearchParams<{ query?: string; category?: string }>();
   const [query, setQuery] = useState(params.query ?? '');
   const [selectedCategory, setSelectedCategory] = useState(params.category ?? '');
   const [listings, setListings] = useState<Listing[]>([]);
 
+  const userId = state.user?.id;
+
   useEffect(() => {
-    getListings()
+    getListings({ excludeSellerId: userId })
       .then(setListings)
       .catch((err) => console.warn('Failed to load listings:', err));
-  }, []);
+  }, [userId]);
 
   const results = useMemo(() => {
     return listings.filter((l) => {

@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChip, ListingCard, SearchBar } from "@/components/ui";
 import { Colors, Radii, Spacing, Typography } from "@/constants/theme";
+import { useApp } from "@/context/AppContext";
 import { CATEGORIES } from "@/data/mockData";
 import { useResponsive } from "@/hooks/useResponsive";
 import { getListings } from "@/lib/api/listings";
@@ -26,6 +27,7 @@ const PRICE_RANGES = [
 ];
 
 export default function BrowseScreen() {
+  const { state } = useApp();
   const { isDesktop, isWeb, contentMaxWidth, gridColumns } = useResponsive();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<ActiveFilters>({
@@ -35,11 +37,13 @@ export default function BrowseScreen() {
   });
   const [listings, setListings] = useState<Listing[]>([]);
 
+  const userId = state.user?.id;
+
   useEffect(() => {
-    getListings()
+    getListings({ excludeSellerId: userId })
       .then(setListings)
       .catch((err) => console.warn("Failed to load listings:", err));
-  }, []);
+  }, [userId]);
 
   const px = isDesktop ? Spacing["2xl"] : Spacing.lg;
 

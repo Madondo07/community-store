@@ -4,7 +4,7 @@
  * Rules:
  * - @mycput.ac.za  → "Student" (verified)
  * - @cput.ac.za    → "Staff" (verified)
- * - Vendors with verification_status === 'approved' → "Verified Seller"
+ * - Vendors with vendor_status === 'verified' → "Verified Seller"
  * - Everyone else  → null (no badge)
  */
 
@@ -21,13 +21,13 @@ export function getVerifiedBadge(user: UserProfile | undefined | null): Verified
     return { label: 'Student', color: Colors.blue };
   }
 
-  // Staff: @cput.ac.za (faculty, admin, etc.)
+  // Staff: @cput.ac.za (admin, staff accounts, etc.)
   if (emailDomain === 'cput.ac.za') {
     return { label: 'Staff', color: Colors.teal };
   }
 
   // Vendors: only if admin-approved
-  if (user.role === 'vendor' && user.verification_status === 'approved') {
+  if (user.role === 'vendor' && user.vendor_status === 'verified') {
     return { label: 'Verified Seller', color: Colors.success };
   }
 
@@ -40,7 +40,7 @@ export function getVerifiedBadge(user: UserProfile | undefined | null): Verified
  */
 export function canPostListings(user: UserProfile | undefined | null): boolean {
   if (!user) return false;
-  if (user.role === 'vendor' && user.verification_status !== 'approved') {
+  if (user.role === 'vendor' && user.vendor_status !== 'verified') {
     return false;
   }
   return true;

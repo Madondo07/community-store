@@ -342,7 +342,7 @@ All types are in [`src/types/index.ts`](file:///c:/Users/DELL/community-store/sr
 
 ```typescript
 // User Roles
-type UserRole = 'student' | 'faculty' | 'vendor' | 'resident' | 'admin';
+type UserRole = 'student' | 'vendor' | 'admin';
 
 interface UserProfile {
   id: string;
@@ -355,7 +355,7 @@ interface UserProfile {
   created_at: string;
   business_name?: string;      // Vendor-only
   registration_number?: string; // Vendor-only
-  verification_status?: 'pending' | 'approved' | 'rejected'; // Vendor-only
+  vendor_status?: 'pending' | 'verified' | 'rejected'; // Vendor-only — named to match the live DB column, see supabase/README.md "Schema drift"
 }
 
 interface Listing {
@@ -384,6 +384,8 @@ interface Listing {
 ## 8. Database Plan (Supabase)
 
 > [!IMPORTANT]
+> **Superseded.** This section is the original pre-implementation plan and no longer matches the live schema in several places (role/vendor-status naming, `updated_at`, etc.). The actual, current source of truth is [`supabase/migrations/`](file:///c:/Users/DELL/community-store/supabase/migrations/) plus [`supabase/README.md`](file:///c:/Users/DELL/community-store/supabase/README.md) — read that file's "Schema drift" section before touching the DB. Kept below for historical context only.
+>
 > The app currently uses mock data in [`src/data/mockData.ts`](file:///c:/Users/DELL/community-store/src/data/mockData.ts) (536 lines, 8 users, 10 listings, reviews, orders, notifications, conversations, bulletin posts). The Supabase client is [installed and configured](file:///c:/Users/DELL/community-store/src/lib/supabase.ts) but pointing to placeholder credentials.
 
 ### Recommended Supabase Setup

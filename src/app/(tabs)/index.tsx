@@ -24,10 +24,6 @@ import { getUnreadNotificationCount } from '@/lib/api/notifications';
 import { canPostListings } from '@/utils/verification';
 import type { Listing } from '@/types';
 
-interface GridItem extends Listing {
-  _sponsored: boolean;
-}
-
 export default function HomeScreen() {
   const { state, cartItemCount } = useApp();
   const { gridColumns, isDesktop, isWeb, contentMaxWidth, useSidebarNav } = useResponsive();
@@ -37,20 +33,20 @@ export default function HomeScreen() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
+  const userId = state.user?.id;
+
   const loadListings = useCallback(async () => {
     try {
-      const data = await getListings();
+      const data = await getListings({ excludeSellerId: userId });
       setListings(data);
     } catch (err) {
       console.warn('Failed to load listings:', err);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
-    getListings()
-      .then(setListings)
-      .catch((err) => console.warn('Failed to load listings:', err));
-  }, []);
+    loadListings();
+  }, [loadListings]);
 
   useEffect(() => {
     const uid = state.user?.id;
@@ -59,25 +55,10 @@ export default function HomeScreen() {
       .catch((err) => console.warn('Failed to load unread count:', err));
   }, [state.user]);
 
-  // Build grid data: sponsored (vendor) items sorted to front
   const gridData = useMemo(() => {
-    const active = listings.filter(
+    return listings.filter(
       (l) => selectedCategory === 'all' || l.category === selectedCategory
     );
-
-    const sponsored: GridItem[] = [];
-    const regular: GridItem[] = [];
-
-    for (const l of active) {
-      if (l.seller?.role === 'vendor') {
-        sponsored.push({ ...l, _sponsored: true });
-      } else {
-        regular.push({ ...l, _sponsored: false });
-      }
-    }
-
-    // Sponsored first, then regular
-    return [...sponsored, ...regular];
   }, [listings, selectedCategory]);
 
   const onRefresh = useCallback(async () => {
@@ -88,11 +69,10 @@ export default function HomeScreen() {
 
   const px = isDesktop ? Spacing['2xl'] : Spacing.lg;
 
-  const renderItem = useCallback(({ item }: { item: GridItem }) => (
+  const renderItem = useCallback(({ item }: { item: Listing }) => (
     <View style={styles.gridCell}>
       <ListingCard
         listing={item}
-        sponsored={item._sponsored}
         onPress={() => router.push(`/listing-detail?id=${item.id}`)}
       />
     </View>

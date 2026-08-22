@@ -3,9 +3,9 @@ import type { BulletinCategory, BulletinPost } from '@/types';
 
 import { unwrap, unwrapNullable } from './_shared';
 
-// email/verification_status/created_at included so getVerifiedBadge()/
+// email/vendor_status/created_at included so getVerifiedBadge()/
 // SellerCard work if a badge is ever rendered for the author.
-const AUTHOR_JOIN = '*, author:profiles(id,email,full_name,avatar_url,role,is_verified,verification_status,created_at)';
+const AUTHOR_JOIN = '*, author:profiles(id,email,full_name,avatar_url,role,is_verified,vendor_status,created_at)';
 
 export async function getBulletinPosts(category?: BulletinCategory): Promise<BulletinPost[]> {
   let q = supabase.from('bulletin_posts').select(AUTHOR_JOIN);

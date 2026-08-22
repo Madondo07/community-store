@@ -4,19 +4,19 @@ import { Heart, Star } from 'lucide-react-native';
 
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
+import { getPriceDropPercent } from '@/utils/pricing';
 import type { Listing } from '@/types';
 
 interface ListingCardProps {
   listing: Listing;
   onPress: () => void;
-  /** Show a "Sponsored" badge alongside the condition badge */
-  sponsored?: boolean;
 }
 
-export default function ListingCard({ listing, onPress, sponsored = false }: ListingCardProps) {
+export default function ListingCard({ listing, onPress }: ListingCardProps) {
   const { dispatch, isWishlisted } = useApp();
   const isNew = listing.condition === 'new';
   const wishlisted = isWishlisted(listing.id);
+  const dropPercent = getPriceDropPercent(listing);
 
   return (
     <Pressable
@@ -42,10 +42,10 @@ export default function ListingCard({ listing, onPress, sponsored = false }: Lis
           </Text>
         </View>
 
-        {/* Sponsored badge — below condition badge */}
-        {sponsored && (
-          <View style={styles.sponsoredBadge}>
-            <Text style={styles.sponsoredText}>Sponsored</Text>
+        {/* Price-drop badge — below condition badge */}
+        {dropPercent != null && (
+          <View style={styles.dropBadge}>
+            <Text style={styles.dropText}>-{dropPercent}%</Text>
           </View>
         )}
 
@@ -72,7 +72,12 @@ export default function ListingCard({ listing, onPress, sponsored = false }: Lis
         <Text style={styles.title} numberOfLines={1}>
           {listing.title}
         </Text>
-        <Text style={styles.price}>R{listing.price.toLocaleString()}</Text>
+        <View style={styles.priceRow}>
+          <Text style={styles.price}>R{listing.price.toLocaleString()}</Text>
+          {dropPercent != null && (
+            <Text style={styles.previousPrice}>R{listing.previous_price!.toLocaleString()}</Text>
+          )}
+        </View>
         <View style={styles.ratingRow}>
           {[1, 2, 3, 4, 5].map((i) => (
             <Star
@@ -104,8 +109,7 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    // ~65-70% of card height when content below is ~30-35%
-    aspectRatio: 4 / 3,
+    aspectRatio: 5 / 4,
   },
 
   // Condition badge — top right
@@ -127,21 +131,22 @@ const styles = StyleSheet.create({
   conditionTextNew: { color: Colors.success },
   conditionTextUsed: { color: Colors.textSecondary },
 
-  // Sponsored badge — below condition badge
-  sponsoredBadge: {
+  // Price-drop badge — below condition badge
+  dropBadge: {
     position: 'absolute',
     top: Spacing.xs + 18, // below condition badge
     right: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radii.sm,
-    backgroundColor: Colors.blue,
+    backgroundColor: Colors.success,
   },
-  sponsoredText: {
+  dropText: {
     ...Typography.caption,
     fontSize: 9,
     lineHeight: 12,
     color: Colors.textInverse,
+    fontWeight: '700',
   },
 
   // Wishlist heart — top left
@@ -167,9 +172,20 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontWeight: '600',
   },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
   price: {
     ...Typography.priceSm,
     color: Colors.navy,
+  },
+  previousPrice: {
+    ...Typography.caption,
+    fontSize: 11,
+    color: Colors.textTertiary,
+    textDecorationLine: 'line-through',
   },
   ratingRow: {
     flexDirection: 'row',

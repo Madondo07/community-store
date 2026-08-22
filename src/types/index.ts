@@ -4,7 +4,7 @@
 
 // ─── User / Auth Types ──────────────────────────────────────────────────────
 
-export type UserRole = "student" | "faculty" | "vendor" | "resident" | "admin";
+export type UserRole = "student" | "vendor" | "admin";
 
 export interface UserProfile {
   id: string;
@@ -19,7 +19,7 @@ export interface UserProfile {
   // Vendor-specific
   business_name?: string;
   registration_number?: string;
-  verification_status?: 'pending' | 'approved' | 'rejected';
+  vendor_status?: 'pending' | 'verified' | 'rejected';
 }
 
 // ─── Verified Badge Types ───────────────────────────────────────────────────
@@ -50,6 +50,8 @@ export interface Listing {
   title: string;
   description: string;
   price: number;
+  /** Previous price, auto-captured by a DB trigger whenever price drops (cleared again if price rises). Non-null + greater than `price` means "show a price-drop badge". */
+  previous_price: number | null;
   category: ListingCategory;
   condition: ListingCondition;
   status: ListingStatus;

@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getOrCreateConversation } from '@/lib/api/conversations';
 import { getListing } from '@/lib/api/listings';
+import { getPriceDropPercent } from '@/utils/pricing';
 import type { Listing } from '@/types';
 
 export default function ListingDetailScreen() {
@@ -66,6 +67,8 @@ export default function ListingDetailScreen() {
     );
   }
 
+  const dropPercent = getPriceDropPercent(listing);
+
   const detailContent = (
     <>
       {/* Tags */}
@@ -75,7 +78,17 @@ export default function ListingDetailScreen() {
       </View>
 
       {/* Price */}
-      <Text style={styles.price}>R{listing.price.toLocaleString()}</Text>
+      <View style={styles.priceRow}>
+        <Text style={styles.price}>R{listing.price.toLocaleString()}</Text>
+        {dropPercent != null && (
+          <>
+            <Text style={styles.previousPrice}>R{listing.previous_price!.toLocaleString()}</Text>
+            <View style={styles.dropChip}>
+              <Text style={styles.dropChipText}>-{dropPercent}%</Text>
+            </View>
+          </>
+        )}
+      </View>
 
       {/* Title */}
       <Text style={styles.title}>{listing.title}</Text>
@@ -86,12 +99,16 @@ export default function ListingDetailScreen() {
       </View>
 
       {/* Seller */}
-      {listing.seller && (
+      {listing.seller ? (
         <SellerCard
           seller={listing.seller}
           compact
           onPress={() => router.push(`/seller-profile?id=${listing.seller_id}`)}
         />
+      ) : (
+        <View style={styles.sellerUnavailable}>
+          <Text style={styles.sellerUnavailableText}>Seller information unavailable</Text>
+        </View>
       )}
 
       {/* Description */}
@@ -193,14 +210,26 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', justifyContent: 'space-between', padding: Spacing.xl, position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
   headerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', ...Shadows.sm },
-  image: { width: '100%', aspectRatio: 4 / 3, backgroundColor: Colors.surfaceAlt },
+  image: { width: '100%', aspectRatio: 1, backgroundColor: Colors.surfaceAlt },
   dots: { flexDirection: 'row', justifyContent: 'center', paddingVertical: Spacing.sm },
   dotActive: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.navy },
   content: { padding: Spacing.xl },
   tagRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
-  price: { ...Typography.price, color: Colors.navy, marginBottom: Spacing.xs },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs },
+  price: { ...Typography.price, color: Colors.navy },
+  previousPrice: { ...Typography.body, color: Colors.textTertiary, textDecorationLine: 'line-through' },
+  dropChip: { backgroundColor: Colors.success, borderRadius: Radii.sm, paddingHorizontal: Spacing.sm, paddingVertical: 2 },
+  dropChipText: { ...Typography.caption, color: Colors.textInverse, fontWeight: '700' },
   title: { ...Typography.titleLg, color: Colors.textPrimary, marginBottom: Spacing.md },
   ratingRow: { marginBottom: Spacing.xl },
+  sellerUnavailable: {
+    padding: Spacing.lg,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sellerUnavailableText: { ...Typography.bodySmall, color: Colors.textTertiary },
   descSection: { marginTop: Spacing.xl },
   descTitle: { ...Typography.titleMd, color: Colors.textPrimary, marginBottom: Spacing.sm },
   desc: { ...Typography.body, color: Colors.textSecondary, lineHeight: 22 },
@@ -209,7 +238,7 @@ const styles = StyleSheet.create({
   // Desktop
   desktopRow: { flexDirection: 'row', gap: Spacing['3xl'], padding: Spacing['2xl'], paddingTop: Spacing['5xl'] },
   desktopImageWrap: { flex: 1, maxWidth: 600 },
-  desktopImage: { width: '100%', aspectRatio: 4 / 3, borderRadius: Radii.lg, backgroundColor: Colors.surfaceAlt },
+  desktopImage: { width: '100%', aspectRatio: 1, borderRadius: Radii.lg, backgroundColor: Colors.surfaceAlt },
   desktopContent: { flex: 1, minWidth: 300 },
   desktopActions: { gap: Spacing.md, marginTop: Spacing['2xl'] },
 });

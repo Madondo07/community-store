@@ -39,7 +39,7 @@ export async function getPendingVendors(): Promise<UserProfile[]> {
     .from('profiles')
     .select('*')
     .eq('role', 'vendor')
-    .eq('verification_status', 'pending')
+    .eq('vendor_status', 'pending')
     .order('created_at', { ascending: true });
   return unwrap<UserProfile[]>(res);
 }
@@ -47,7 +47,7 @@ export async function getPendingVendors(): Promise<UserProfile[]> {
 export async function approveVendor(userId: string): Promise<void> {
   const res = await supabase
     .from('profiles')
-    .update({ verification_status: 'approved', is_verified: true })
+    .update({ vendor_status: 'verified', is_verified: true })
     .eq('id', userId);
   if (res.error) throw new Error(res.error.message);
 }
@@ -55,7 +55,7 @@ export async function approveVendor(userId: string): Promise<void> {
 export async function rejectVendor(userId: string): Promise<void> {
   const res = await supabase
     .from('profiles')
-    .update({ verification_status: 'rejected' })
+    .update({ vendor_status: 'rejected' })
     .eq('id', userId);
   if (res.error) throw new Error(res.error.message);
 }

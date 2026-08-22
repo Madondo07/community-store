@@ -3,9 +3,9 @@ import type { Review } from '@/types';
 
 import { unwrap } from './_shared';
 
-// email/verification_status/created_at included so getVerifiedBadge()/
+// email/vendor_status/created_at included so getVerifiedBadge()/
 // SellerCard work if a badge is ever rendered for the reviewer.
-const REVIEWER_JOIN = '*, reviewer:profiles(id,email,full_name,avatar_url,role,is_verified,verification_status,created_at)';
+const REVIEWER_JOIN = '*, reviewer:profiles(id,email,full_name,avatar_url,role,is_verified,vendor_status,created_at)';
 
 export async function getReviewsForSeller(sellerId: string): Promise<Review[]> {
   const res = await supabase

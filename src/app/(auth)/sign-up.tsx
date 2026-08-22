@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { BookOpen, GraduationCap, Home, Lock, Mail, Store, User } from 'lucide-react-native';
+import { GraduationCap, Lock, Mail, Store, User } from 'lucide-react-native';
 
 import { AuthInput, Button, RoleSelectCard } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
@@ -22,9 +22,7 @@ import type { UserProfile, UserRole } from '@/types';
 
 const ROLES: { key: UserRole; label: string; icon: typeof GraduationCap }[] = [
   { key: 'student', label: 'Student', icon: GraduationCap },
-  { key: 'faculty', label: 'Faculty', icon: BookOpen },
   { key: 'vendor', label: 'Vendor', icon: Store },
-  { key: 'resident', label: 'Resident', icon: Home },
 ];
 
 export default function RoleSelectScreen() {

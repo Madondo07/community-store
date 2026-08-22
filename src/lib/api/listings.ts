@@ -7,7 +7,7 @@ import { unwrap, unwrapNullable } from './_shared';
 // them (email for the student/staff domain check, created_at for "member
 // since") — a prior version omitted these and crashed on listing-detail.
 const SELLER_JOIN =
-  '*, seller:profiles(id,email,full_name,avatar_url,role,is_verified,verification_status,business_name,created_at)';
+  '*, seller:profiles(id,email,full_name,avatar_url,role,is_verified,vendor_status,business_name,created_at)';
 
 export interface ListingFilters {
   category?: ListingCategory;
@@ -16,6 +16,8 @@ export interface ListingFilters {
   maxPrice?: number;
   query?: string;
   sellerId?: string;
+  /** Excludes this seller's own listings — used on browse/search/home feeds so a user can't buy their own listing. Use `sellerId` instead to show only that seller's listings (e.g. their own profile). */
+  excludeSellerId?: string;
   /** Defaults to 'active'. Pass an explicit status, or `null` for any status (owner/admin views). */
   status?: ListingStatus | null;
 }
@@ -29,6 +31,7 @@ export async function getListings(filters: ListingFilters = {}): Promise<Listing
   if (filters.minPrice !== undefined) q = q.gte('price', filters.minPrice);
   if (filters.maxPrice !== undefined) q = q.lte('price', filters.maxPrice);
   if (filters.sellerId) q = q.eq('seller_id', filters.sellerId);
+  if (filters.excludeSellerId) q = q.neq('seller_id', filters.excludeSellerId);
   if (filters.query) {
     q = q.or(`title.ilike.%${filters.query}%,description.ilike.%${filters.query}%`);
   }

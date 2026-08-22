@@ -43,11 +43,11 @@ export default function VendorVerificationScreen() {
       await updateProfile(state.user.id, {
         business_name: businessName,
         registration_number: regNumber,
-        verification_status: 'pending',
+        vendor_status: 'pending',
       });
       dispatch({
         type: 'UPDATE_PROFILE',
-        payload: { business_name: businessName, registration_number: regNumber, verification_status: 'pending' },
+        payload: { business_name: businessName, registration_number: regNumber, vendor_status: 'pending' },
       });
       setSubmitted(true);
     } catch (err: any) {

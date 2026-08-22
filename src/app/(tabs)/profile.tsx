@@ -69,13 +69,26 @@ export default function ProfileScreen() {
       .catch((err) => console.warn('Failed to load saved listings:', err));
   }, [state.wishlist]);
 
-  const handleDeleteListing = async (id: string) => {
-    try {
-      await deleteListing(id);
-      setUserListings((prev) => prev.filter((l) => l.id !== id));
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Could not delete listing.');
-    }
+  const handleDeleteListing = (listing: Listing) => {
+    Alert.alert(
+      'Delete listing?',
+      `"${listing.title}" will be permanently deleted. This can't be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteListing(listing.id);
+              setUserListings((prev) => prev.filter((l) => l.id !== listing.id));
+            } catch (err: any) {
+              Alert.alert('Error', err.message ?? 'Could not delete listing.');
+            }
+          },
+        },
+      ],
+    );
   };
 
   if (!user) {
@@ -103,9 +116,11 @@ export default function ProfileScreen() {
                   <Text style={styles.listingPrice}>R{listing.price}</Text>
                 </View>
                 <View style={styles.listingActions}>
-                  <Pressable hitSlop={8} accessibilityLabel="Edit"><Pencil size={18} color={Colors.textSecondary} /></Pressable>
+                  <Pressable hitSlop={8} onPress={() => router.push(`/new-listing?id=${listing.id}`)} accessibilityLabel="Edit">
+                    <Pencil size={18} color={Colors.textSecondary} />
+                  </Pressable>
                   <Pressable hitSlop={8} accessibilityLabel="Mark sold"><CheckCircle size={18} color={Colors.success} /></Pressable>
-                  <Pressable hitSlop={8} onPress={() => handleDeleteListing(listing.id)} accessibilityLabel="Delete">
+                  <Pressable hitSlop={8} onPress={() => handleDeleteListing(listing)} accessibilityLabel="Delete">
                     <Trash2 size={18} color={Colors.danger} />
                   </Pressable>
                 </View>

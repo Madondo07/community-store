@@ -7,8 +7,9 @@
  * Goes through real signup + RLS (not a service-role bypass) — each
  * persona signs up/in for themselves and inserts their own rows, exactly
  * like a real user would through the app. Requires EXPO_PUBLIC_SUPABASE_URL
- * and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env, and that the 8 migrations in
- * supabase/migrations/ have already been applied.
+ * and EXPO_PUBLIC_SUPABASE_ANON_KEY in .env, and that the migrations in
+ * supabase/migrations/ (through 0009_sync_live_schema.sql) have already
+ * been applied.
  *
  * Run with: node scripts/seed.js
  */
@@ -108,7 +109,7 @@ async function main() {
         .update({
           business_name: persona.business_name,
           registration_number: persona.registration_number,
-          verification_status: "approved",
+          vendor_status: "verified",
           is_verified: true,
         })
         .eq("id", result.userId);

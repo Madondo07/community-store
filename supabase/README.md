@@ -28,6 +28,33 @@ After `0008_storage_buckets.sql`, check **Storage** in the dashboard for two
 new buckets — `listing-images` (public) and `verification-docs` (private) —
 each with the policies listed in that file.
 
+## Schema drift (2026-08) and `0009_sync_live_schema.sql`
+
+The live project's `profiles`/`listings` tables were found to have been
+evolved by hand past what `0000`–`0008` describe: `profiles` had no
+`avatar_url` column at all, its vendor-approval column was named
+`vendor_status` (enum: `pending`/`verified`/`rejected`) instead of the
+`verification_status` text column `0000`/`0007` assumed, `role` only had
+`student`/`vendor`/`admin` (no `faculty`/`resident`), and `orders`,
+`order_items`, `notifications`, `reviews`, `bulletin_posts`, and `reports`
+didn't exist at all (matching `0002`–`0006` never having been pasted in).
+
+**Decision: the live naming stays, the app repo was updated to match it.**
+`vendor_status` / `'verified'` and the 3-role enum are now what
+`src/types/index.ts` and every `src/lib/api/*` query use — see
+`0009_sync_live_schema.sql` for the exact rationale. That file is safe to
+paste in one shot even on a partially-migrated project (every statement is
+`if not exists` / `create or replace` / `drop policy if exists` +
+`create policy`), and ends with `notify pgrst, 'reload schema';` so
+PostgREST picks up the changes immediately.
+
+`0007_profiles_listings_policies.sql` was **not** folded into `0009` — the
+`profiles_1` embedding error seen alongside this drift strongly suggests
+its admin policies are already live, and its own pre-flight check (no
+`RESTRICTIVE` policy on `profiles`/`listings`) needs to pass before
+re-running it. Run the preflight query first; only re-run `0007` if that
+policy is confirmed missing.
+
 ## Capturing the pre-existing schema
 
 `profiles`, `listings`, `conversations`, `messages`, the `handle_new_user`
