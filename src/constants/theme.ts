@@ -50,7 +50,7 @@ export const Colors = {
   tabActive: "#2F4858",
 } as const;
 
-// ─── Fonts ───────────────────────────────────────────────────────────────────
+// ─── Fonts (legacy system fallback — kept for compatibility) ─────────────────
 
 export const Fonts = Platform.select({
   ios: {
@@ -79,6 +79,15 @@ export const Fonts = Platform.select({
   },
 });
 
+// ─── Brand Fonts (Swych official — Poppins headings, Inter body) ─────────────
+
+export const FontFamily = {
+  headingBold: "Poppins_700Bold",
+  headingExtraBold: "Poppins_800ExtraBold",
+  bodyRegular: "Inter_400Regular",
+  bodyMedium: "Inter_500Medium",
+} as const;
+
 // ─── Typography ──────────────────────────────────────────────────────────────
 
 export const Typography = {
@@ -87,37 +96,44 @@ export const Typography = {
     fontWeight: "700" as const,
     lineHeight: 34,
     letterSpacing: -0.3,
+    fontFamily: FontFamily.headingExtraBold,
   },
   displayMd: {
     fontSize: 24,
     fontWeight: "700" as const,
     lineHeight: 30,
     letterSpacing: -0.2,
+    fontFamily: FontFamily.headingBold,
   },
   titleLg: {
     fontSize: 20,
     fontWeight: "600" as const,
     lineHeight: 26,
+    fontFamily: FontFamily.headingBold,
   },
   titleMd: {
     fontSize: 17,
     fontWeight: "600" as const,
     lineHeight: 22,
+    fontFamily: FontFamily.headingBold,
   },
   titleSm: {
     fontSize: 15,
-    fontWeight: "600" as const,
+    fontWeight: "400" as const,
     lineHeight: 20,
+    fontFamily: FontFamily.headingBold,
   },
   body: {
     fontSize: 15,
     fontWeight: "400" as const,
     lineHeight: 22,
+    fontFamily: FontFamily.bodyRegular,
   },
   bodySmall: {
     fontSize: 13,
     fontWeight: "400" as const,
     lineHeight: 18,
+    fontFamily: FontFamily.bodyRegular,
   },
   caption: {
     fontSize: 11,
@@ -125,17 +141,20 @@ export const Typography = {
     lineHeight: 14,
     letterSpacing: 0.3,
     textTransform: "uppercase" as const,
+    fontFamily: FontFamily.bodyMedium,
   },
   price: {
     fontSize: 22,
     fontWeight: "800" as const,
     lineHeight: 26,
     letterSpacing: -0.3,
+    fontFamily: FontFamily.headingExtraBold,
   },
   priceSm: {
     fontSize: 16,
     fontWeight: "700" as const,
     lineHeight: 20,
+    fontFamily: FontFamily.headingBold,
   },
 } as const;
 
