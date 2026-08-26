@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   RefreshControl,
@@ -82,7 +83,18 @@ export default function HomeScreen() {
     <View>
       {/* Header */}
       <View style={[styles.header, { paddingHorizontal: px }]}>
-        <Text style={styles.headerTitle}>{useSidebarNav ? 'Marketplace' : 'Community Store'}</Text>
+        {useSidebarNav ? (
+          <Text style={styles.headerTitle}>Marketplace</Text>
+        ) : (
+          <View style={styles.brandRow}>
+            <Image
+              source={require('../../../assets/images/Swych_Icon_Only_Transparent.png')}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerTitle}>Swych</Text>
+          </View>
+        )}
         <View style={styles.headerActions}>
           <Pressable onPress={() => {
             if (!canPostListings(state.user)) {
@@ -192,6 +204,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
   },
   headerTitle: { ...Typography.titleMd, color: Colors.navy },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+  brandLogo: { width: 24, height: 24 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   iconBtn: { padding: Spacing.xs, position: 'relative' as const },
   iconBtnPill: {
