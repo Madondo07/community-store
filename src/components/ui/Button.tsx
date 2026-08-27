@@ -12,7 +12,7 @@ import { Colors, Radii, Spacing } from '@/constants/theme';
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'danger';
+  variant?: 'primary' | 'secondary' | 'accent' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
   disabled?: boolean;
@@ -44,12 +44,18 @@ export default function Button({
   const bgColor =
     variant === 'primary'
       ? Colors.navy
-      : variant === 'danger'
-        ? Colors.danger
-        : 'transparent';
+      : variant === 'accent'
+        ? Colors.teal700
+        : variant === 'danger'
+          ? Colors.danger
+          : 'transparent';
 
+  // Brand rule: teal backgrounds always use navy text, never white —
+  // white-on-teal fails contrast.
   const textColor =
-    variant === 'secondary' ? Colors.navy : Colors.textInverse;
+    variant === 'secondary' || variant === 'accent'
+      ? Colors.navy700
+      : Colors.textInverse;
 
   const borderColor =
     variant === 'secondary' ? Colors.navy : 'transparent';

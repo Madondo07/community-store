@@ -11,42 +11,61 @@
 
 import { Platform } from "react-native";
 
-// ─── Brand Colors ────────────────────────────────────────────────────────────
+// ─── Brand Colors (Swych official palette — Section 7 brand guide) ───────────
 
 export const Colors = {
-  // CPUT brand blues
-  navy: "#2F4858",
-  blue: "#0072CE",
-  teal: "#8ED4D0",
+  // Navy (primary)
+  navy: "#2F4858",       // 500 — headers, primary buttons, active nav
+  navy700: "#21323E",    // darker navy for text/high-contrast needs
+  navy100: "#D5DADE",
+  navy50: "#EEF0F2",
+
+  // Teal (secondary/accent)
+  teal: "#8ED4D0",        // 500 — lighter backgrounds, soft accents
+  teal700: "#639492",     // stronger teal — use for buttons/badges needing contrast
+  teal200: "#D2EEEC",
+  teal100: "#E8F6F6",
+
+  // Gray (neutral)
+  gray700: "#484D50",
+  gray500: "#788085",
+  gray200: "#D6D9DA",
+  gray50: "#F8F9F9",
+
+  // Legacy "blue" — repurposed to brand teal-700 for interactive highlights
+  // (selected chips, focus borders). Consider renaming usages to `teal700`
+  // directly in a future pass — kept as `blue` for now so existing
+  // components (17 usages across 11 files) don't break.
+  blue: "#639492",
 
   // Surfaces
-  background: "#F5F6F8",
+  background: "#F8F9F9",
   surface: "#FFFFFF",
-  surfaceAlt: "#EEF0F4",
+  surfaceAlt: "#EEF0F2",
 
   // Text
   textPrimary: "#1A1D23",
-  textSecondary: "#6B7280",
-  textTertiary: "#9CA3AF",
+  textSecondary: "#484D50",
+  textTertiary: "#788085",
   textInverse: "#FFFFFF",
 
-  // Semantic
-  success: "#059669",
+  // Semantic (official functional colors)
+  success: "#389E6D",
   successLight: "#D1FAE5",
-  warning: "#D97706",
+  warning: "#E09E35",
   warningLight: "#FEF3C7",
-  danger: "#DC2626",
+  danger: "#D34747",
   dangerLight: "#FEE2E2",
 
   // UI chrome
-  border: "#E5E7EB",
-  borderFocused: "#0072CE",
-  divider: "#F3F4F6",
+  border: "#D6D9DA",
+  borderFocused: "#639492",
+  divider: "#F8F9F9",
   overlay: "rgba(0, 0, 0, 0.5)",
   overlayLight: "rgba(47, 72, 88, 0.06)",
 
   // Tab bar
-  tabInactive: "#9CA3AF",
+  tabInactive: "#788085",
   tabActive: "#2F4858",
 } as const;
 
