@@ -50,6 +50,45 @@ export const Colors = {
   tabActive: "#2F4858",
 } as const;
 
+// ─── Dark Palette ────────────────────────────────────────────────────────────
+
+export const DarkColors = {
+  navy: "#8ED4D0",        // accent role in dark mode — bright teal, 5.7:1 contrast vs dark navy bg (passes WCAG AA)
+  blue: "#6FB3E0",         // provisional lighter blue — team hasn't locked the light-mode blue value yet either
+  teal: "#D2EEEC",
+
+  background: "#21323E",
+  surface: "#2F4858",
+  surfaceAlt: "#283D4B",
+
+  textPrimary: "#F8F9F9",
+  textSecondary: "#B7BEC2",
+  textTertiary: "#8B9296",
+  textInverse: "#1A2830",  // dark text for teal-filled elements — preserves navy-on-teal contrast rule
+
+  success: "#389E6D",
+  successLight: "#1F3D2E",
+  warning: "#E09E35",
+  warningLight: "#3D2F14",
+  danger: "#D34747",
+  dangerLight: "#3D1F1F",
+
+  border: "#3A4A56",
+  borderFocused: "#6FB3E0",
+  divider: "#2C3A44",
+  overlay: "rgba(0, 0, 0, 0.5)",
+  overlayLight: "rgba(255, 255, 255, 0.06)",
+
+  tabInactive: "#6B7680",
+  tabActive: "#8ED4D0",
+} as const;
+
+export type ColorPalette = Record<keyof typeof Colors, string>;
+
+export function getColors(scheme: "light" | "dark"): ColorPalette {
+  return scheme === "dark" ? DarkColors : Colors;
+}
+
 // ─── Fonts ───────────────────────────────────────────────────────────────────
 
 export const Fonts = Platform.select({
