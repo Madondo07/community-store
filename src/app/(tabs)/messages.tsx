@@ -1,4 +1,6 @@
-import React, { useCallback, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { Lock, MessageCircle } from 'lucide-react-native';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -8,16 +10,14 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
-import { Lock, MessageCircle } from 'lucide-react-native';
 
 import { Avatar, ListingImage } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { supabase } from '@/lib/supabase';
-import { getVerifiedBadge } from '@/utils/verification';
 import type { UserProfile } from '@/types';
+import { getVerifiedBadge } from '@/utils/verification';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -374,10 +374,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xs,
   },
   unreadText: {
-    color: Colors.textInverse,
-    fontSize: 10,
-    fontWeight: '700',
-  },
+  color: Colors.navy700,
+  fontSize: 10,
+  fontWeight: '700',
+},
   sep: {
     height: 1,
     backgroundColor: Colors.divider,

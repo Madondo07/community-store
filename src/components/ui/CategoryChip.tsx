@@ -1,6 +1,5 @@
-import React from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
 import { X } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
 
@@ -35,7 +34,7 @@ export default function CategoryChip({
           style={styles.removeBtn}
           accessibilityLabel={`Remove ${label} filter`}
         >
-          <X size={14} color={selected ? Colors.textInverse : Colors.textSecondary} />
+          <X size={14} color={selected ? Colors.navy700 : Colors.textSecondary} />
         </Pressable>
       )}
     </Pressable>
@@ -60,8 +59,8 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   labelSelected: {
-    color: Colors.textInverse,
-  },
+  color: Colors.navy700,
+},
   removeBtn: {
     marginLeft: Spacing.xs,
   },

@@ -1,14 +1,3 @@
-import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import {
   Bookmark,
@@ -21,16 +10,27 @@ import {
   Store,
   Trash2,
 } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Avatar, Button, ListingImage, StatusBadge, VerifiedBadge } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { deleteListing, getListingsBySeller, getListingsByIds } from '@/lib/api/listings';
+import { deleteListing, getListingsByIds, getListingsBySeller } from '@/lib/api/listings';
 import { getMyOrders } from '@/lib/api/orders';
 import { supabase } from '@/lib/supabase';
-import { canPostListings } from '@/utils/verification';
 import type { Listing, Order } from '@/types';
+import { canPostListings } from '@/utils/verification';
 
 const TABS = ['Listings', 'Posts', 'Orders', 'Saved'] as const;
 
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   userInfoDesktop: { flexDirection: 'row', alignItems: 'center' },
   userName: { ...Typography.titleLg, color: Colors.textPrimary, marginTop: Spacing.md },
   roleBadge: { backgroundColor: Colors.blue, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: Radii.full, marginTop: Spacing.sm, alignSelf: 'center' },
-  roleBadgeText: { ...Typography.bodySmall, color: Colors.textInverse, fontWeight: '600' },
+  roleBadgeText: { ...Typography.bodySmall, color: Colors.navy700, fontWeight: '600' },
   tabRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: Colors.border },
   tab: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center' },
   tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.navy },
