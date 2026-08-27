@@ -1,4 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlashList } from '@shopify/flash-list';
+import { router } from 'expo-router';
+import { Bell, MessageCircle, PlusCircle, ShoppingBag } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Image,
@@ -10,20 +13,17 @@ import {
   Text,
   View,
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Bell, MessageCircle, PlusCircle, ShoppingBag } from 'lucide-react-native';
 
 import { CategoryChip, ListingCard, SearchBar } from '@/components/ui';
-import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
+import { Colors, FontFamily, Radii, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { CATEGORIES } from '@/data/mockData';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getListings } from '@/lib/api/listings';
 import { getUnreadNotificationCount } from '@/lib/api/notifications';
-import { canPostListings } from '@/utils/verification';
 import type { Listing } from '@/types';
+import { canPostListings } from '@/utils/verification';
 
 export default function HomeScreen() {
   const { state, cartItemCount } = useApp();
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: Spacing.sm,
   },
-  headerTitle: { ...Typography.titleMd, color: Colors.navy },
+  headerTitle: { ...Typography.titleMd, color: Colors.navy, fontFamily: FontFamily.headingBold },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   brandLogo: { width: 24, height: 24 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
