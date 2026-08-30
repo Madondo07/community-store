@@ -3,6 +3,7 @@ import { Lock, Mail, User } from "lucide-react-native";
 import { useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -137,7 +138,12 @@ export default function RoleSelectScreen() {
           <View style={[styles.formCard, isDesktop && styles.formCardDesktop]}>
             {/* Header */}
             <View style={styles.header}>
-              <Text style={styles.title}>Community Store</Text>
+              <Image
+                source={require("../../../assets/images/Swych_Icon_Only_Transparent.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+              <Text style={styles.title}>Swych</Text>
               <Text style={styles.subtitle}>
                 Your trusted campus marketplace
               </Text>
@@ -188,7 +194,7 @@ export default function RoleSelectScreen() {
             )}
 
             <Button
-              title="Join Community Store"
+              title="Join Swych"
               onPress={handleJoin}
               fullWidth
               size="lg"
@@ -228,6 +234,7 @@ const styles = StyleSheet.create({
     ...Shadows.lg,
   },
   header: { alignItems: "center", marginBottom: Spacing["3xl"] },
+  logo: { width: 56, height: 56, marginBottom: Spacing.md },
   title: { ...Typography.displayLg, color: Colors.navy, textAlign: "center" },
   subtitle: {
     ...Typography.body,

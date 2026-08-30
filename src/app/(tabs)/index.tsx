@@ -1,6 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { FlashList } from '@shopify/flash-list';
+import { router } from 'expo-router';
+import { Bell, MessageCircle, Monitor, Moon, PlusCircle, ShoppingBag, Sun } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Image,
   Platform,
   Pressable,
   RefreshControl,
@@ -9,21 +13,18 @@ import {
   Text,
   View,
 } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-import { Bell, MessageCircle, Monitor, Moon, PlusCircle, ShoppingBag, Sun } from 'lucide-react-native';
 
 import { CategoryChip, ListingCard, SearchBar } from '@/components/ui';
-import { Radii, Spacing, Typography } from '@/constants/theme';
+import { FontFamily, Radii, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useAppTheme } from '@/context/ThemeContext';
 import { CATEGORIES } from '@/data/mockData';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getListings } from '@/lib/api/listings';
 import { getUnreadNotificationCount } from '@/lib/api/notifications';
-import { canPostListings } from '@/utils/verification';
 import type { Listing } from '@/types';
+import { canPostListings } from '@/utils/verification';
 
 const THEME_CYCLE = ['system', 'light', 'dark'] as const;
 
@@ -94,7 +95,18 @@ export default function HomeScreen() {
   const ListHeader = useCallback(() => (
     <View>
       <View style={[styles.header, { paddingHorizontal: px }]}>
-        <Text style={styles.headerTitle}>{useSidebarNav ? 'Marketplace' : 'Community Store'}</Text>
+        {useSidebarNav ? (
+          <Text style={styles.headerTitle}>Marketplace</Text>
+        ) : (
+          <View style={styles.brandRow}>
+            <Image
+              source={require('../../../assets/images/Swych_Icon_Only_Transparent.png')}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.headerTitle}>Swych</Text>
+          </View>
+        )}
         <View style={styles.headerActions}>
           <Pressable onPress={cycleTheme} style={styles.iconBtn} accessibilityLabel="Toggle theme">
             <ThemeIcon size={Spacing.xl} color={colors.navy} />
@@ -204,7 +216,9 @@ function useMemoStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
           justifyContent: 'space-between',
           paddingVertical: Spacing.sm,
         },
-        headerTitle: { ...Typography.titleMd, color: colors.navy },
+        headerTitle: { ...Typography.titleMd, color: colors.navy, fontFamily: FontFamily.headingBold },
+        brandRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
+        brandLogo: { width: 24, height: 24 },
         headerActions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
         iconBtn: { padding: Spacing.xs, position: 'relative' as const },
         iconBtnPill: {

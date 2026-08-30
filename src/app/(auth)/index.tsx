@@ -1,8 +1,9 @@
 import { router } from "expo-router";
-import { Lock, Mail, User } from "lucide-react-native";
+import { Lock, Mail } from "lucide-react-native";
 import { useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -129,7 +130,11 @@ export default function SignInScreen() {
         >
           <View style={[styles.formCard, isDesktop && styles.formCardDesktop]}>
             <View style={styles.avatarCircle}>
-              <User size={40} color={Colors.textTertiary} />
+              <Image
+                source={require("../../../assets/images/Swych_Icon_Only_Transparent.png")}
+                style={styles.avatarLogo}
+                resizeMode="contain"
+              />
             </View>
 
             <Text style={styles.title}>Welcome Back</Text>
@@ -225,6 +230,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing["2xl"],
     alignSelf: "center",
   },
+  avatarLogo: { width: 48, height: 48 },
   title: { ...Typography.displayMd, color: Colors.navy, textAlign: "center" },
   subtitle: {
     ...Typography.body,

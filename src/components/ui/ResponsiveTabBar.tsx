@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Radii, Spacing, Typography } from '@/constants/theme';
@@ -25,8 +25,14 @@ export default function ResponsiveTabBar({ state, descriptors, navigation }: any
         ]}
       >
         <View style={styles.sidebarBrand}>
-          <Text style={styles.sidebarBrandTitle}>Community</Text>
-          <Text style={styles.sidebarBrandTitle}>Store</Text>
+          <View style={styles.sidebarBrandRow}>
+            <Image
+              source={require('../../../assets/images/Swych_Icon_Only_Transparent.png')}
+              style={styles.sidebarBrandLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.sidebarBrandTitle}>Swych</Text>
+          </View>
           <View style={styles.sidebarBrandLine} />
           <Text style={styles.sidebarBrandSub}>CPUT Campus Marketplace</Text>
         </View>
@@ -152,6 +158,12 @@ function useMemoStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
           paddingHorizontal: Spacing.md,
           marginBottom: Spacing['3xl'],
         },
+        sidebarBrandRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: Spacing.sm,
+        },
+        sidebarBrandLogo: { width: 32, height: 32 },
         sidebarBrandTitle: {
           ...Typography.displayMd,
           color: colors.navy,

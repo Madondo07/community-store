@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Heart, Share2 } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, CategoryChip, ListingImage, SellerCard, StarRating } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
@@ -10,8 +10,8 @@ import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getOrCreateConversation } from '@/lib/api/conversations';
 import { getListing } from '@/lib/api/listings';
-import { getPriceDropPercent } from '@/utils/pricing';
 import type { Listing } from '@/types';
+import { getPriceDropPercent } from '@/utils/pricing';
 
 export default function ListingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -139,7 +139,7 @@ export default function ListingDetailScreen() {
           {!isOwnListing && (
             <Button
               title="Message Seller"
-              variant="secondary"
+              variant="accent"
               onPress={handleMessageSeller}
               fullWidth
             />
@@ -204,7 +204,7 @@ export default function ListingDetailScreen() {
           {!isOwnListing && (
             <Button
               title="Message Seller"
-              variant="secondary"
+              variant="accent"
               onPress={handleMessageSeller}
               style={{ flex: 1 }}
             />

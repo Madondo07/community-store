@@ -11,44 +11,64 @@
 
 import { Platform } from "react-native";
 
-// ─── Brand Colors ────────────────────────────────────────────────────────────
+// ─── Brand Colors (Swych official palette — Section 7 brand guide) ───────────
 
 export const Colors = {
-  // CPUT brand blues
-  navy: "#2F4858",
-  blue: "#0072CE",
-  teal: "#8ED4D0",
+  // Navy (primary)
+  navy: "#2F4858",       // 500 — headers, primary buttons, active nav
+  navy700: "#21323E",    // darker navy for text/high-contrast needs
+  navy100: "#D5DADE",
+  navy50: "#EEF0F2",
+
+  // Teal (secondary/accent)
+  teal: "#8ED4D0",        // 500 — lighter backgrounds, soft accents
+  teal700: "#639492",     // stronger teal — use for buttons/badges needing contrast
+  teal200: "#D2EEEC",
+  teal100: "#E8F6F6",
+
+  // Gray (neutral)
+  gray700: "#484D50",
+  gray500: "#788085",
+  gray200: "#D6D9DA",
+  gray50: "#F8F9F9",
+
+  // Legacy "blue" — repurposed to brand teal-700 for interactive highlights
+  // (selected chips, focus borders). Consider renaming usages to `teal700`
+  // directly in a future pass — kept as `blue` for now so existing
+  // components (17 usages across 11 files) don't break.
+  blue: "#639492",
 
   // Surfaces
-  background: "#F5F6F8",
+  background: "#F8F9F9",
   surface: "#FFFFFF",
-  surfaceAlt: "#EEF0F4",
+  surfaceAlt: "#EEF0F2",
 
   // Text
   textPrimary: "#1A1D23",
-  textSecondary: "#6B7280",
-  textTertiary: "#9CA3AF",
+  textSecondary: "#484D50",
+  textTertiary: "#788085",
   textInverse: "#FFFFFF",
 
-  // Semantic
-  success: "#059669",
+  // Semantic (official functional colors)
+  success: "#389E6D",
   successLight: "#D1FAE5",
-  warning: "#D97706",
+  warning: "#E09E35",
   warningLight: "#FEF3C7",
-  danger: "#DC2626",
+  danger: "#D34747",
   dangerLight: "#FEE2E2",
 
   // UI chrome
-  border: "#E5E7EB",
-  borderFocused: "#0072CE",
-  divider: "#F3F4F6",
+  border: "#D6D9DA",
+  borderFocused: "#639492",
+  divider: "#F8F9F9",
   overlay: "rgba(0, 0, 0, 0.5)",
   overlayLight: "rgba(47, 72, 88, 0.06)",
 
   // Tab bar
-  tabInactive: "#9CA3AF",
+  tabInactive: "#788085",
   tabActive: "#2F4858",
 } as const;
+
 
 // ─── Dark Palette ────────────────────────────────────────────────────────────
 
@@ -81,6 +101,16 @@ export const DarkColors = {
 
   tabInactive: "#6B7680",
   tabActive: "#8ED4D0",
+    navy700: "#639492",
+  navy100: "#3A4A56",
+  navy50: "#283D4B",
+  teal700: "#8ED4D0",
+  teal200: "#21323E",
+  teal100: "#1A2830",
+  gray700: "#D6D9DA",
+  gray500: "#8B9296",
+  gray200: "#484D50",
+  gray50: "#21323E",
 } as const;
 
 export type ColorPalette = Record<keyof typeof Colors, string>;
@@ -90,6 +120,7 @@ export function getColors(scheme: "light" | "dark"): ColorPalette {
 }
 
 // ─── Fonts ───────────────────────────────────────────────────────────────────
+// ─── Fonts (legacy system fallback — kept for compatibility) ─────────────────
 
 export const Fonts = Platform.select({
   ios: {
@@ -118,6 +149,15 @@ export const Fonts = Platform.select({
   },
 });
 
+// ─── Brand Fonts (Swych official — Poppins headings, Inter body) ─────────────
+
+export const FontFamily = {
+  headingBold: "Poppins_700Bold",
+  headingExtraBold: "Poppins_800ExtraBold",
+  bodyRegular: "Inter_400Regular",
+  bodyMedium: "Inter_500Medium",
+} as const;
+
 // ─── Typography ──────────────────────────────────────────────────────────────
 
 export const Typography = {
@@ -126,37 +166,44 @@ export const Typography = {
     fontWeight: "700" as const,
     lineHeight: 34,
     letterSpacing: -0.3,
+    fontFamily: FontFamily.headingExtraBold,
   },
   displayMd: {
     fontSize: 24,
     fontWeight: "700" as const,
     lineHeight: 30,
     letterSpacing: -0.2,
+    fontFamily: FontFamily.headingBold,
   },
   titleLg: {
     fontSize: 20,
     fontWeight: "600" as const,
     lineHeight: 26,
+    fontFamily: FontFamily.headingBold,
   },
   titleMd: {
     fontSize: 17,
     fontWeight: "600" as const,
     lineHeight: 22,
+    fontFamily: FontFamily.headingBold,
   },
   titleSm: {
     fontSize: 15,
-    fontWeight: "600" as const,
+    fontWeight: "400" as const,
     lineHeight: 20,
+    fontFamily: FontFamily.headingBold,
   },
   body: {
     fontSize: 15,
     fontWeight: "400" as const,
     lineHeight: 22,
+    fontFamily: FontFamily.bodyRegular,
   },
   bodySmall: {
     fontSize: 13,
     fontWeight: "400" as const,
     lineHeight: 18,
+    fontFamily: FontFamily.bodyRegular,
   },
   caption: {
     fontSize: 11,
@@ -164,17 +211,20 @@ export const Typography = {
     lineHeight: 14,
     letterSpacing: 0.3,
     textTransform: "uppercase" as const,
+    fontFamily: FontFamily.bodyMedium,
   },
   price: {
     fontSize: 22,
     fontWeight: "800" as const,
     lineHeight: 26,
     letterSpacing: -0.3,
+    fontFamily: FontFamily.headingExtraBold,
   },
   priceSm: {
     fontSize: 16,
     fontWeight: "700" as const,
     lineHeight: 20,
+    fontFamily: FontFamily.headingBold,
   },
 } as const;
 
