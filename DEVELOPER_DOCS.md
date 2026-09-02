@@ -703,29 +703,7 @@ The default signed-in user is `u1` (Dumisane Madondo).
 
 ---
 
-## 10. Remaining Work
-
-### High Priority
-- [ ] **Connect Supabase** — auth, database, storage (see Section 8)
-- [ ] **Real image uploads** — replace placeholder URLs with Supabase Storage
-- [ ] **Chat / messaging** — currently shows "coming soon" alert; wire with Supabase Realtime
-- [ ] **Payment integration** — PayFast for South African payments
-
-### Medium Priority
-- [ ] **Responsive polish** — 7 secondary screens still need `useResponsive`: checkout, new-listing, notifications, order-confirmed, rate-purchase, search-results, admin-dashboard
-- [ ] **Push notifications** — Expo Push Notifications + Supabase Edge Functions
-- [ ] **Admin vendor approval flow** — admin dashboard button to approve/reject pending vendors
-- [ ] **Search** — full-text search via Supabase `pg_trgm` or `fts`
-
-### Nice to Have
-- [ ] **Dark mode** — theme tokens already support it (swap `Colors` object)
-- [ ] **Animations** — `react-native-reanimated` is installed, add transitions
-- [ ] **Image gallery** — swipeable image viewer on listing detail
-- [ ] **Deep linking** — share listings via URL (scheme: `communitystore://`)
-
----
-
-## 11. Development Setup
+## 10. Development Setup
 
 ```bash
 # 1. Clone the repo
