@@ -24,7 +24,7 @@ import {
   User,
 } from 'lucide-react-native';
 
-import { AuthInput, Avatar, Button } from '@/components/ui';
+import { AuthInput, Avatar, Button, IconButton } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -183,9 +183,9 @@ export default function SettingsScreen() {
         <View style={[styles.contentWrap, { maxWidth: contentMaxWidth, paddingHorizontal: padding }]}>
           {/* Header */}
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} accessibilityLabel="Go back">
+            <IconButton onPress={() => router.back()} accessibilityLabel="Go back">
               <ArrowLeft size={24} color={Colors.textPrimary} />
-            </Pressable>
+            </IconButton>
             <Text style={styles.headerTitle}>Settings</Text>
             <View style={{ width: 24 }} />
           </View>

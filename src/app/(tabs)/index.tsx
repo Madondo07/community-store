@@ -6,7 +6,6 @@ import {
   Alert,
   Image,
   Platform,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { CategoryChip, ListingCard, SearchBar } from '@/components/ui';
+import { CategoryChip, IconButton, ListingCard, SearchBar } from '@/components/ui';
 import { FontFamily, Radii, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useAppTheme } from '@/context/ThemeContext';
@@ -108,10 +107,10 @@ export default function HomeScreen() {
           </View>
         )}
         <View style={styles.headerActions}>
-          <Pressable onPress={cycleTheme} style={styles.iconBtn} accessibilityLabel="Toggle theme">
+          <IconButton onPress={cycleTheme} style={styles.iconBtn} accessibilityLabel="Toggle theme">
             <ThemeIcon size={Spacing.xl} color={colors.navy} />
-          </Pressable>
-          <Pressable onPress={() => {
+          </IconButton>
+          <IconButton onPress={() => {
             if (!canPostListings(state.user)) {
               Alert.alert('Restricted', 'Your vendor account is pending verification.');
               return;
@@ -120,9 +119,9 @@ export default function HomeScreen() {
           }} style={[styles.iconBtn, isDesktop && styles.iconBtnPill]} accessibilityLabel="Create listing">
             <PlusCircle size={Spacing.xl} color={colors.navy} />
             {isDesktop && <Text style={styles.iconBtnLabel}>Sell</Text>}
-          </Pressable>
+          </IconButton>
           {!useSidebarNav && (
-            <Pressable onPress={() => {
+            <IconButton onPress={() => {
               if (!canPostListings(state.user)) {
                 Alert.alert('Restricted', 'Your vendor account is pending verification.');
                 return;
@@ -131,18 +130,18 @@ export default function HomeScreen() {
             }} style={styles.iconBtn} accessibilityLabel="Messages">
               <MessageCircle size={Spacing.xl} color={colors.navy} />
               {unreadCount > 0 && <View style={styles.dot} />}
-            </Pressable>
+            </IconButton>
           )}
-          <Pressable onPress={() => router.push('/cart')} style={styles.iconBtn} accessibilityLabel="Cart">
+          <IconButton onPress={() => router.push('/cart')} style={styles.iconBtn} accessibilityLabel="Cart">
             <ShoppingBag size={Spacing.xl} color={colors.navy} />
             {cartItemCount > 0 && (
               <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{cartItemCount}</Text></View>
             )}
-          </Pressable>
-          <Pressable onPress={() => router.push('/notifications')} style={styles.iconBtn} accessibilityLabel="Notifications">
+          </IconButton>
+          <IconButton onPress={() => router.push('/notifications')} style={styles.iconBtn} accessibilityLabel="Notifications">
             <Bell size={Spacing.xl} color={colors.navy} />
             {unreadCount > 0 && <View style={styles.dot} />}
-          </Pressable>
+          </IconButton>
         </View>
       </View>
 

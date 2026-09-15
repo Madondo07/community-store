@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 
-import { CategoryChip, ListingCard, SearchBar } from '@/components/ui';
+import { CategoryChip, IconButton, ListingCard, SearchBar } from '@/components/ui';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { getListings } from '@/lib/api/listings';
@@ -39,7 +39,7 @@ export default function SearchResultsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></Pressable>
+        <IconButton onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></IconButton>
         <View style={styles.searchWrap}>
           <SearchBar value={query} onChangeText={setQuery} onSubmit={() => {}} placeholder="Search..." />
         </View>

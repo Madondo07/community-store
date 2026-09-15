@@ -137,6 +137,48 @@ anything in `migrations/`. To get them under git:
   `supabase db dump --schema public -f supabase/baseline_schema_dump.sql`.
   Migration numbering in `migrations/` can continue cleanly after that.
 
+## `0014_bulletin_important_and_management.sql`
+
+Adds `bulletin_posts.is_important` (board renders these with a red border,
+no other special treatment yet — pending the validation pass mentioned
+below) and a 6th category, `management`. No RLS changes — the existing
+admin-full-access + public-select policies from `0004` already cover it.
+
+`bulletin_posts.date` (already live since `0004`) changes role here too:
+the composer's calendar/time picker now always sets it (default: now,
+editable), and the app's "posted X ago" timer reads `date`, falling back
+to `created_at` only for older rows that predate this change. That's an
+app-code change, not a migration — nothing to run for it beyond `0014`
+itself.
+
+**Not done yet, by design**: no validation on post content, dates, or the
+`is_important` flag — admins can currently backdate/postdate/mark anything
+important with no guardrails. Flagged as a follow-up once the admin
+posting flow has settled, not an oversight.
+
+## `0015_bulletin_post_notifications.sql`
+
+Adds `'bulletin'` to `notifications.type` and a trigger
+(`notify_students_on_bulletin_post`, `security definer`) that fires on
+`bulletin_posts` INSERT only — not UPDATE, so editing an existing post
+doesn't re-notify everyone — and inserts one notification row per
+`profiles` row with `role = 'student'`.
+
+Deliberately a server-side trigger, not a client-side loop in the
+composer: `notifications_insert_any_authenticated` (`0006`) already lets
+any authenticated user insert a notification for any `user_id`, but that
+trust gap was meant for one-off cases (a review notifying its seller), not
+for one admin action fanning out an insert per student. A trigger also
+means it can't be forgotten if a second place ever creates bulletin posts.
+
+**Scope, by explicit choice**: students only, not vendors or admins — this
+was a direct product decision, not a technical default. Broadening it
+(e.g. vendors too) is just widening the trigger's `where role = ...`
+clause. Fires on every new post regardless of category or
+`is_important` — no per-category subscription/opt-out exists yet; that'd
+need a `profiles`-level "subscribed categories" concept that doesn't exist
+today.
+
 ## Design decisions worth knowing about
 
 - **`OrderStatus`/`BulletinCategory` match `src/types/index.ts` as it exists

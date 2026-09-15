@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Button, ListingImage, StatusBadge, VerifiedBadge } from '@/components/ui';
+import { Avatar, Button, IconButton, ListingImage, StatusBadge, VerifiedBadge } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -187,9 +187,9 @@ export default function ProfileScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Profile</Text>
-            <Pressable onPress={() => router.push('/settings')} accessibilityLabel="Settings">
+            <IconButton onPress={() => router.push('/settings')} accessibilityLabel="Settings">
               <Settings size={24} color={Colors.textSecondary} />
-            </Pressable>
+            </IconButton>
           </View>
 
           {/* User section — side-by-side on desktop */}

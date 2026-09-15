@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { X } from 'lucide-react-native';
 
-import { Avatar, Button, StarRating } from '@/components/ui';
+import { Avatar, Button, IconButton, StarRating } from '@/components/ui';
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { getListing } from '@/lib/api/listings';
@@ -81,7 +81,7 @@ export default function RatePurchaseScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Rate Your Purchase</Text>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Close"><X size={24} color={Colors.textPrimary} /></Pressable>
+        <IconButton onPress={() => router.back()} accessibilityLabel="Close"><X size={24} color={Colors.textPrimary} /></IconButton>
       </View>
 
       <View style={styles.content}>

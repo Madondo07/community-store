@@ -77,3 +77,9 @@ Thumbs.db
 
 #Supabase
 .env
+
+#Claude
+.claude
+
+#Gitignore
+.gitignore

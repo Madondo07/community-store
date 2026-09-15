@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { ArrowLeft, Bell, MessageCircle, Package, Star } from 'lucide-react-native';
+import { ArrowLeft, Bell, Megaphone, MessageCircle, Package, Star } from 'lucide-react-native';
 
+import { IconButton } from '@/components/ui';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import {
@@ -18,6 +19,7 @@ const TYPE_ICONS: Record<NotificationType, typeof Package> = {
   message: MessageCircle,
   review: Star,
   system: Bell,
+  bulletin: Megaphone,
 };
 
 export default function NotificationsScreen() {
@@ -60,7 +62,7 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></Pressable>
+        <IconButton onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></IconButton>
         <Text style={styles.headerTitle}>Notifications</Text>
         <Pressable onPress={handleMarkAllRead}>
           <Text style={styles.markAll}>Mark all read</Text>

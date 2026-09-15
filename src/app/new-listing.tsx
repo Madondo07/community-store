@@ -5,7 +5,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera, Plus, X } from 'lucide-react-native';
 
-import { Button, CategoryChip } from '@/components/ui';
+import { Button, CategoryChip, IconButton } from '@/components/ui';
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { CATEGORIES } from '@/data/mockData';
@@ -165,7 +165,7 @@ export default function NewListingScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{isEditMode ? 'Edit Listing' : 'New Listing'}</Text>
-        <Pressable onPress={() => router.back()} accessibilityLabel="Close"><X size={24} color={Colors.textPrimary} /></Pressable>
+        <IconButton onPress={() => router.back()} accessibilityLabel="Close"><X size={24} color={Colors.textPrimary} /></IconButton>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">

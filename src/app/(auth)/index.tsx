@@ -104,15 +104,23 @@ export default function SignInScreen() {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert("Email required", "Enter your email address above first, then tap \"Forgot password?\" again.");
+      Alert.alert(
+        "Email required",
+        'Enter your email address above first, then tap "Forgot password?" again.',
+      );
       return;
     }
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim());
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+    );
     if (resetError) {
       Alert.alert("Error", resetError.message);
       return;
     }
-    Alert.alert("Check your email", `We've sent a password reset link to ${email.trim()}.`);
+    Alert.alert(
+      "Check your email",
+      `We've sent a password reset link to ${email.trim()}.`,
+    );
   };
 
   return (
@@ -166,7 +174,10 @@ export default function SignInScreen() {
                   error && !password.trim() ? "Password is required" : undefined
                 }
               />
-              <Pressable style={styles.forgotWrap} onPress={handleForgotPassword}>
+              <Pressable
+                style={styles.forgotWrap}
+                onPress={handleForgotPassword}
+              >
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </Pressable>
             </View>

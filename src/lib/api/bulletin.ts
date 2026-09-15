@@ -26,8 +26,21 @@ export async function createBulletinPost(input: {
   body: string;
   location?: string;
   date?: string;
+  is_important?: boolean;
 }): Promise<BulletinPost> {
   const res = await supabase.from('bulletin_posts').insert(input).select(AUTHOR_JOIN).single();
+  return unwrap<BulletinPost>(res as any);
+}
+
+export async function updateBulletinPost(id: string, input: {
+  category?: BulletinCategory;
+  title?: string;
+  body?: string;
+  location?: string | null;
+  date?: string;
+  is_important?: boolean;
+}): Promise<BulletinPost> {
+  const res = await supabase.from('bulletin_posts').update(input).eq('id', id).select(AUTHOR_JOIN).single();
   return unwrap<BulletinPost>(res as any);
 }
 

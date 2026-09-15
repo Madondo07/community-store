@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react-native';
 
-import { Button } from '@/components/ui';
+import { Button, IconButton } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -18,7 +18,7 @@ export default function CartScreen() {
     <SafeAreaView style={styles.safe} edges={isWeb ? [] : ['top']}>
       <View style={[styles.contentWrap, { maxWidth: contentMaxWidth }]}>
         <View style={[styles.header, { paddingHorizontal: padding }]}>
-          <Pressable onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></Pressable>
+          <IconButton onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></IconButton>
           <Text style={styles.headerTitle}>Cart ({cartItemCount})</Text>
           <View style={{ width: 24 }} />
         </View>

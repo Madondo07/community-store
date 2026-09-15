@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Button, CategoryChip, ListingImage, SellerCard, StarRating } from '@/components/ui';
+import { Button, CategoryChip, IconButton, ListingImage, SellerCard, StarRating } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -154,20 +154,20 @@ export default function ListingDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={[styles.header, isDesktop && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%' as any, paddingHorizontal: Spacing['2xl'] }]}>
-          <Pressable onPress={() => router.back()} style={styles.headerBtn} accessibilityLabel="Go back">
+          <IconButton onPress={() => router.back()} style={styles.headerBtn} accessibilityLabel="Go back">
             <ArrowLeft size={24} color={Colors.textPrimary} />
-          </Pressable>
+          </IconButton>
           <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <Pressable
+            <IconButton
               onPress={() => dispatch({ type: 'TOGGLE_WISHLIST', payload: listing.id })}
               style={styles.headerBtn}
               accessibilityLabel={isWishlisted(listing.id) ? 'Remove from wishlist' : 'Save to wishlist'}
             >
               <Heart size={22} color={isWishlisted(listing.id) ? Colors.danger : Colors.textPrimary} fill={isWishlisted(listing.id) ? Colors.danger : 'transparent'} />
-            </Pressable>
-            <Pressable onPress={() => Alert.alert('Share', 'Share feature coming soon')} style={styles.headerBtn} accessibilityLabel="Share">
+            </IconButton>
+            <IconButton onPress={() => Alert.alert('Share', 'Share feature coming soon')} style={styles.headerBtn} accessibilityLabel="Share">
               <Share2 size={22} color={Colors.textPrimary} />
-            </Pressable>
+            </IconButton>
           </View>
         </View>
 

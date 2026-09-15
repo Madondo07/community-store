@@ -125,7 +125,7 @@ export interface OrderItem {
 
 // ─── Notification Types ─────────────────────────────────────────────────────
 
-export type NotificationType = "order" | "message" | "review" | "system";
+export type NotificationType = "order" | "message" | "review" | "system" | "bulletin";
 
 export interface Notification {
   id: string;
@@ -142,7 +142,7 @@ export interface Notification {
 
 // ─── Bulletin Board Types ───────────────────────────────────────────────────
 
-export type BulletinCategory = "newsflash" | "cts" | "events" | "services" | "lost_and_found";
+export type BulletinCategory = "newsflash" | "cts" | "management" | "events" | "services" | "lost_and_found";
 
 export interface BulletinPost {
   id: string;
@@ -151,7 +151,12 @@ export interface BulletinPost {
   title: string;
   body: string;
   location?: string;
+  /** Admin-set post date/time (calendar + time picker) — the "posted X ago"
+   *  timer is computed from this, not from created_at, so a backdated or
+   *  edited post displays its real-world time rather than DB insert time. */
   date?: string;
+  /** Marks a post as highly important — rendered with a red border on the board. */
+  is_important?: boolean;
   created_at: string;
   // Joined
   author?: UserProfile;

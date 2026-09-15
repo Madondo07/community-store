@@ -13,7 +13,7 @@ import { ArrowLeft, BadgeCheck, Send as SendIcon } from 'lucide-react-native';
 import { GiftedChat, Bubble, InputToolbar, Composer, Send } from 'react-native-gifted-chat';
 import type { IMessage } from 'react-native-gifted-chat';
 
-import { Avatar, ListingImage } from '@/components/ui';
+import { Avatar, IconButton, ListingImage } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -289,9 +289,9 @@ export default function ChatThreadScreen() {
       <View style={[styles.container, { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%' as any }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
+          <IconButton onPress={() => router.back()} style={styles.backBtn} accessibilityLabel="Go back">
             <ArrowLeft size={Spacing['2xl']} color={Colors.navy} />
-          </Pressable>
+          </IconButton>
           <Pressable
             style={styles.headerCenter}
             onPress={() => params.otherUserId && router.push(`/seller-profile?id=${params.otherUserId}`)}

@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { CheckCircle2, FileText, LogOut, Phone, ShieldAlert, ShieldCheck, Store } from 'lucide-react-native';
+import { CheckCircle2, FileText, LogOut, Megaphone, Phone, PlusCircle, ShieldAlert, ShieldCheck, Store } from 'lucide-react-native';
 
-import { Avatar, Button, ListingImage, StatCard, StatusBadge } from '@/components/ui';
+import { Avatar, Button, IconButton, ListingImage, StatCard, StatusBadge } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -201,13 +201,13 @@ export default function AdminDashboardScreen() {
           </View>
         </View>
         <View style={styles.headerActions}>
-          <Pressable onPress={() => router.push('/(tabs)')} style={styles.visitStoreBtn} accessibilityLabel="Visit store">
+          <IconButton onPress={() => router.push('/(tabs)')} style={styles.visitStoreBtn} accessibilityLabel="Visit store">
             <Store size={16} color={Colors.navy} />
             {isDesktop && <Text style={styles.visitStoreText}>Visit Store</Text>}
-          </Pressable>
-          <Pressable onPress={handleSignOut} style={styles.iconBtn} accessibilityLabel="Sign out">
+          </IconButton>
+          <IconButton onPress={handleSignOut} style={styles.iconBtn} accessibilityLabel="Sign out">
             <LogOut size={20} color={Colors.textSecondary} />
-          </Pressable>
+          </IconButton>
         </View>
       </View>
 
@@ -221,6 +221,22 @@ export default function AdminDashboardScreen() {
             <StatCard label="Reported" value={stats?.reported_users ?? 0} color={Colors.warning} />
             <StatCard label="Listings" value={stats?.active_listings ?? 0} color={Colors.blue} />
             <StatCard label="Users" value={stats?.active_users ?? 0} color={Colors.success} />
+          </View>
+
+          {/* Bulletin Board — quick-post shortcut. The bulletin tab itself
+              keeps its own "Post" button too; this just saves admins a trip
+              through Visit Store when they're already in the dashboard. */}
+          <View style={styles.bulletinShortcut}>
+            <View style={styles.bulletinShortcutInfo}>
+              <Megaphone size={20} color={Colors.navy} />
+              <Text style={styles.bulletinShortcutText}>Post a new bulletin announcement</Text>
+            </View>
+            <Button
+              title="New Post"
+              size="sm"
+              icon={<PlusCircle size={16} color={Colors.textInverse} />}
+              onPress={() => router.push('/bulletin-composer')}
+            />
           </View>
 
           {pendingActionCount === 0 && (
@@ -414,6 +430,19 @@ const styles = StyleSheet.create({
     marginBottom: Spacing['2xl'],
   },
   allClearText: { ...Typography.bodySmall, color: Colors.success, flex: 1, fontWeight: '500' },
+  bulletinShortcut: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: Radii.md,
+    padding: Spacing.lg,
+    marginBottom: Spacing['2xl'],
+    ...Shadows.sm,
+  },
+  bulletinShortcutInfo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1, flexShrink: 1 },
+  bulletinShortcutText: { ...Typography.bodySmall, color: Colors.textPrimary, fontWeight: '600', flexShrink: 1 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md },
   countPill: {
     minWidth: 22,

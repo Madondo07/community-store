@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 
-import { Avatar, Button, ListingCard, StarRating, VerifiedBadge } from '@/components/ui';
+import { Avatar, Button, IconButton, ListingCard, StarRating, VerifiedBadge } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -75,7 +75,7 @@ export default function SellerProfileScreen() {
         <View style={[{ maxWidth: contentMaxWidth, alignSelf: 'center' as any, width: '100%' as any }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></Pressable>
+          <IconButton onPress={() => router.back()} accessibilityLabel="Go back"><ArrowLeft size={24} color={Colors.textPrimary} /></IconButton>
         </View>
 
         {/* Profile */}

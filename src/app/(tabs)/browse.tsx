@@ -1,12 +1,11 @@
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
-import { X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { CategoryChip, ListingCard, SearchBar } from "@/components/ui";
-import { Colors, Radii, Spacing, Typography } from "@/constants/theme";
+import { Colors, Spacing, Typography } from "@/constants/theme";
 import { useApp } from "@/context/AppContext";
 import { CATEGORIES } from "@/data/mockData";
 import { useResponsive } from "@/hooks/useResponsive";
@@ -143,62 +142,44 @@ export default function BrowseScreen() {
           ))}
         </ScrollView>
 
-        {/* Quick Filters — condition + price */}
+        {/* Quick Filters — condition + price. Same CategoryChip used for
+            the category row above, so a "selected filter" always looks the
+            same regardless of which row it's in. */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.quickRow, { paddingHorizontal: px }]}
+          contentContainerStyle={[styles.chipRow, { paddingHorizontal: px }]}
         >
-          <Pressable
+          <CategoryChip
+            label="New"
+            selected={filters.condition === "new"}
             onPress={() =>
               setFilters((f) => ({
                 ...f,
                 condition: f.condition === "new" ? null : "new",
               }))
             }
-            style={[
-              styles.quickChip,
-              filters.condition === "new" && styles.quickChipActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.quickChipText,
-                filters.condition === "new" && styles.quickChipTextActive,
-              ]}
-            >
-              New
-            </Text>
-          </Pressable>
-          <Pressable
+          />
+          <CategoryChip
+            label="Used"
+            selected={filters.condition === "used"}
             onPress={() =>
               setFilters((f) => ({
                 ...f,
                 condition: f.condition === "used" ? null : "used",
               }))
             }
-            style={[
-              styles.quickChip,
-              filters.condition === "used" && styles.quickChipActive,
-            ]}
-          >
-            <Text
-              style={[
-                styles.quickChipText,
-                filters.condition === "used" && styles.quickChipTextActive,
-              ]}
-            >
-              Used
-            </Text>
-          </Pressable>
+          />
           <View style={styles.chipDivider} />
           {PRICE_RANGES.map((range) => {
             const isActive =
               filters.priceRange?.min === range.min &&
               filters.priceRange?.max === range.max;
             return (
-              <Pressable
+              <CategoryChip
                 key={range.label}
+                label={range.label}
+                selected={isActive}
                 onPress={() =>
                   setFilters((f) => ({
                     ...f,
@@ -207,33 +188,24 @@ export default function BrowseScreen() {
                       : { min: range.min, max: range.max },
                   }))
                 }
-                style={[styles.quickChip, isActive && styles.quickChipActive]}
-              >
-                <Text
-                  style={[
-                    styles.quickChipText,
-                    isActive && styles.quickChipTextActive,
-                  ]}
-                >
-                  {range.label}
-                </Text>
-              </Pressable>
+              />
             );
           })}
         </ScrollView>
 
-        {/* Active Filter Pills (removable with X) */}
+        {/* Active Filter Pills — CategoryChip's own removable/onRemove,
+            same chip used everywhere else, not a third one-off style. */}
         {activeFilterChips.length > 0 && (
           <View style={[styles.activeFilters, { paddingHorizontal: px }]}>
             {activeFilterChips.map((chip) => (
-              <Pressable
+              <CategoryChip
                 key={chip.key}
+                label={chip.label}
+                selected
+                removable
                 onPress={chip.onRemove}
-                style={styles.activeChip}
-              >
-                <Text style={styles.activeChipText}>{chip.label}</Text>
-                <X size={Spacing.md} color={Colors.navy} />
-              </Pressable>
+                onRemove={chip.onRemove}
+              />
             ))}
             <Pressable
               onPress={() =>
@@ -304,35 +276,7 @@ const styles = StyleSheet.create({
   },
   title: { ...Typography.titleLg, color: Colors.navy },
 
-  chipRow: { paddingBottom: Spacing.sm, gap: Spacing.sm },
-
-  // Quick filters
-  quickRow: {
-    paddingBottom: Spacing.sm,
-    gap: Spacing.sm,
-    alignItems: "center",
-  },
-  quickChip: {
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.full,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  quickChipActive: {
-    backgroundColor: Colors.overlayLight,
-    borderColor: Colors.navy,
-  },
-  quickChipText: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
-    fontWeight: "500",
-  },
-  quickChipTextActive: {
-    color: Colors.navy,
-    fontWeight: "600",
-  },
+  chipRow: { paddingBottom: Spacing.sm, gap: Spacing.sm, alignItems: "center" },
   chipDivider: {
     width: 1,
     height: Spacing.xl,
@@ -346,22 +290,6 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     paddingBottom: Spacing.md,
     alignItems: "center",
-  },
-  activeChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: Spacing.xs,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    backgroundColor: Colors.overlayLight,
-    borderRadius: Radii.full,
-    borderWidth: 1,
-    borderColor: Colors.navy,
-  },
-  activeChipText: {
-    ...Typography.bodySmall,
-    color: Colors.navy,
-    fontWeight: "600",
   },
   clearBtn: { paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xs },
   clearBtnText: {
