@@ -1,3 +1,4 @@
+import React from 'react';
 import { router } from 'expo-router';
 import {
   Bookmark,

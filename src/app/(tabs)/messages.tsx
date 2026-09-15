@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { Lock, MessageCircle } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,

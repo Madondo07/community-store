@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Megaphone, MessageCircle, Search, User } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';

@@ -1,3 +1,4 @@
+import React from 'react';
 import { X } from 'lucide-react-native';
 import { Pressable, StyleSheet, Text } from 'react-native';
 

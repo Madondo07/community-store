@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { Lock, Mail, User } from "lucide-react-native";
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Alert,
   Image,
