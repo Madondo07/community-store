@@ -58,6 +58,14 @@ export default function AdminDashboardScreen() {
   };
 
   const handleRemoveContent = async (report: Report) => {
+    const title = report.listing?.title ?? 'this listing';
+    const confirmed = await confirm({
+      title: 'Remove this listing?',
+      message: `"${title}" will be hidden from the marketplace. The listing is kept for records, but buyers will no longer see it.`,
+      confirmLabel: 'Remove Listing',
+      destructive: true,
+    });
+    if (!confirmed) return;
     setActingOn(report.id);
     try {
       // updateReportStatus already flips the listing's own status to
@@ -136,6 +144,17 @@ export default function AdminDashboardScreen() {
   };
 
   const handleVendorDecision = async (vendor: UserProfile, approve: boolean) => {
+    // Approving is the safe direction; rejecting denies vendor access, so it
+    // needs an explicit confirm first.
+    if (!approve) {
+      const confirmed = await confirm({
+        title: 'Reject vendor application?',
+        message: `${vendor.business_name ?? vendor.full_name}'s application will be rejected and they will be denied vendor access.`,
+        confirmLabel: 'Reject Application',
+        destructive: true,
+      });
+      if (!confirmed) return;
+    }
     setActingOn(vendor.id);
     try {
       if (approve) {
