@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { Image, ImageStyle, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
+import { ImageStyle, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { ImageOff } from 'lucide-react-native';
 
 import { useAppTheme } from '@/context/ThemeContext';
@@ -19,7 +20,10 @@ interface ListingImageProps {
  * nothing, which is indistinguishable from a layout bug.
  */
 export default function ListingImage({ uri, style, iconSize = 28 }: ListingImageProps) {
-  const [failed, setFailed] = useState(false);
+  // Keyed to the URL that failed, so a recycled list cell given a new image
+  // doesn't inherit the previous cell's failure.
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  const failed = failedUri === uri;
   const { colors } = useAppTheme();
   const placeholderStyle = useMemo(() => ({ backgroundColor: colors.surfaceAlt }), [colors]);
 
@@ -32,11 +36,17 @@ export default function ListingImage({ uri, style, iconSize = 28 }: ListingImage
   }
 
   return (
+    // expo-image rather than RN's <Image>: persistent memory+disk cache (a
+    // scrolled-back-to grid cell doesn't re-download), decodes off the JS
+    // thread, and recycles cleanly inside FlashList cells.
     <Image
       source={{ uri }}
       style={style as StyleProp<ImageStyle>}
-      resizeMode="cover"
-      onError={() => setFailed(true)}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      transition={120}
+      recyclingKey={uri}
+      onError={() => setFailedUri(uri ?? null)}
     />
   );
 }

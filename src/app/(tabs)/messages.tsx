@@ -98,54 +98,55 @@ export default function MessagesScreen() {
         return;
       }
 
-      // Build enriched rows
-      const rows: ConversationRow[] = [];
+      // Enrich all conversations with three batched queries run in parallel
+      // (was 3 sequential queries per conversation — N chats meant 3N round
+      // trips, one after another, before the list could render).
+      const otherIds = [
+        ...new Set(convos.map((c) => (c.participant_one === uid ? c.participant_two : c.participant_one))),
+      ];
+      const listingIds = [...new Set(convos.map((c) => c.listing_id).filter((id): id is string => !!id))];
+      const convoIds = convos.map((c) => c.id);
 
-      for (const c of convos) {
-        const otherId = c.participant_one === uid ? c.participant_two : c.participant_one;
-
-        // Fetch other user profile
-        const { data: profile } = await supabase
+      const [profilesRes, listingsRes, unreadRes] = await Promise.all([
+        supabase
           .from('profiles')
           .select('id, full_name, avatar_url, email, role, is_verified, vendor_status')
-          .eq('id', otherId)
-          .single();
-
-        // Fetch linked listing's snapshot (name + thumbnail) if this
-        // thread is about a specific product
-        let listingTitle: string | null = null;
-        let listingImage: string | null = null;
-        if (c.listing_id) {
-          const { data: listing } = await supabase
-            .from('listings')
-            .select('title, images')
-            .eq('id', c.listing_id)
-            .single();
-          listingTitle = listing?.title ?? null;
-          listingImage = listing?.images?.[0] ?? null;
-        }
-
-        // Count unread messages (sent by the other participant, unread by me)
-        const { count } = await supabase
+          .in('id', otherIds),
+        listingIds.length > 0
+          ? supabase.from('listings').select('id, title, images').in('id', listingIds)
+          : Promise.resolve({ data: [] as { id: string; title: string; images: string[] | null }[] }),
+        // Unread = sent by the other participant (never me), not yet read.
+        supabase
           .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('conversation_id', c.id)
-          .eq('sender_id', otherId)
-          .is('read_at', null);
+          .select('conversation_id')
+          .in('conversation_id', convoIds)
+          .neq('sender_id', uid)
+          .is('read_at', null),
+      ]);
 
-        rows.push({
+      const profileById = new Map((profilesRes.data ?? []).map((p) => [p.id, p]));
+      const listingById = new Map((listingsRes.data ?? []).map((l) => [l.id, l]));
+      const unreadByConvo = new Map<string, number>();
+      for (const m of unreadRes.data ?? []) {
+        unreadByConvo.set(m.conversation_id, (unreadByConvo.get(m.conversation_id) ?? 0) + 1);
+      }
+
+      const rows: ConversationRow[] = convos.map((c) => {
+        const otherId = c.participant_one === uid ? c.participant_two : c.participant_one;
+        const listing = c.listing_id ? listingById.get(c.listing_id) : undefined;
+        return {
           id: c.id,
           participant_one: c.participant_one,
           participant_two: c.participant_two,
           listing_id: c.listing_id,
           last_message_at: c.last_message_at,
           last_message_content: c.last_message_content,
-          other_user: profile ?? null,
-          listing_title: listingTitle,
-          listing_image: listingImage,
-          unread_count: count ?? 0,
-        });
-      }
+          other_user: profileById.get(otherId) ?? null,
+          listing_title: listing?.title ?? null,
+          listing_image: listing?.images?.[0] ?? null,
+          unread_count: unreadByConvo.get(c.id) ?? 0,
+        };
+      });
 
       setConversations(rows);
     } catch (err) {

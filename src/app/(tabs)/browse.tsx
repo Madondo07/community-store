@@ -108,7 +108,11 @@ export default function BrowseScreen() {
     [],
   );
 
-  const ListHeader = useCallback(
+  // An element, not a component: ListHeaderComponent={fn} gets a new
+  // identity every time `query` changes (it's a dependency), so the whole
+  // header — including the search box being typed in — was unmounted and
+  // remounted on each keystroke, dropping focus.
+  const ListHeader = useMemo(
     () => (
       <View>
         {/* Header */}

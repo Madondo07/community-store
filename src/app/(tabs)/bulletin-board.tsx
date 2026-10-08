@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
@@ -100,9 +100,15 @@ export default function BulletinBoardTab() {
   // Sorted (not just filtered) by the admin-set post date/time, newest
   // first — an edited/backdated post needs to re-slot into the timeline,
   // not stay pinned where it was originally inserted.
-  const filtered = (selectedCat === 'all' ? posts : posts.filter((p) => p.category === selectedCat))
-    .slice()
-    .sort((a, b) => new Date(effectiveTimestamp(b)).getTime() - new Date(effectiveTimestamp(a)).getTime());
+  // Memoized: this component re-renders every 15s (relative-time ticker) and
+  // on every "Read more" tap, and none of that should re-sort the list.
+  const filtered = useMemo(
+    () =>
+      (selectedCat === 'all' ? posts : posts.filter((p) => p.category === selectedCat))
+        .slice()
+        .sort((a, b) => new Date(effectiveTimestamp(b)).getTime() - new Date(effectiveTimestamp(a)).getTime()),
+    [posts, selectedCat],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={isWeb ? [] : ['top']}>

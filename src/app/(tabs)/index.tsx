@@ -74,7 +74,10 @@ export default function HomeScreen() {
     </View>
   ), [styles]);
 
-  const ListHeader = useCallback(() => (
+  // An element, not a component — see the note in browse.tsx. A function
+  // component whose identity changes with `searchValue` remounts the header
+  // (and its search box) on every keystroke.
+  const ListHeader = useMemo(() => (
     <View>
       <View style={[styles.header, { paddingHorizontal: px }]}>
         {useSidebarNav ? (
