@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Heart, Star } from 'lucide-react-native';
 
-import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
+import { Colors, Radii, Shadows, Spacing, Typography, type ColorPalette } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
+import { useAppTheme } from '@/context/ThemeContext';
 import { getPriceDropPercent } from '@/utils/pricing';
 import type { Listing } from '@/types';
 import ListingImage from './ListingImage';
@@ -15,6 +16,8 @@ interface ListingCardProps {
 
 export default function ListingCard({ listing, onPress }: ListingCardProps) {
   const { dispatch, isWishlisted } = useApp();
+  const { colors } = useAppTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isNew = listing.condition === 'new';
   const wishlisted = isWishlisted(listing.id);
   const dropPercent = getPriceDropPercent(listing);
@@ -70,8 +73,8 @@ export default function ListingCard({ listing, onPress }: ListingCardProps) {
         >
           <Heart
             size={Spacing.lg}
-            color={wishlisted ? Colors.danger : Colors.textInverse}
-            fill={wishlisted ? Colors.danger : 'transparent'}
+            color={wishlisted ? colors.danger : Colors.textInverse}
+            fill={wishlisted ? colors.danger : 'transparent'}
           />
         </Pressable>
       </View>
@@ -92,8 +95,8 @@ export default function ListingCard({ listing, onPress }: ListingCardProps) {
             <Star
               key={i}
               size={11}
-              color={Colors.warning}
-              fill={i <= Math.round(listing.avg_rating ?? 0) ? Colors.warning : 'transparent'}
+              color={colors.warning}
+              fill={i <= Math.round(listing.avg_rating ?? 0) ? colors.warning : 'transparent'}
             />
           ))}
           {listing.review_count != null && (
@@ -105,10 +108,15 @@ export default function ListingCard({ listing, onPress }: ListingCardProps) {
   );
 }
 
-const styles = StyleSheet.create({
+// Built from the active palette so the card follows light/dark. Content that
+// sits on top of photos or coloured badges (heart, SOLD, price-drop) keeps the
+// fixed light-palette white (Colors.textInverse) — the dark palette's own
+// textInverse is dark text, which would vanish on those backgrounds.
+function makeStyles(c: ColorPalette) {
+  return StyleSheet.create({
   card: {
     flex: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: c.surface,
     borderRadius: Radii.md,
     overflow: 'hidden',
     ...Shadows.sm,
@@ -132,7 +140,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radii.sm,
-    backgroundColor: Colors.danger,
+    backgroundColor: c.danger,
   },
   soldBadgeText: {
     ...Typography.caption,
@@ -151,15 +159,15 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: Radii.sm,
   },
-  conditionNew: { backgroundColor: Colors.successLight },
-  conditionUsed: { backgroundColor: Colors.surfaceAlt },
+  conditionNew: { backgroundColor: c.successLight },
+  conditionUsed: { backgroundColor: c.surfaceAlt },
   conditionText: {
     ...Typography.caption,
     fontSize: 9,
     lineHeight: 12,
   },
-  conditionTextNew: { color: Colors.success },
-  conditionTextUsed: { color: Colors.textSecondary },
+  conditionTextNew: { color: c.success },
+  conditionTextUsed: { color: c.textSecondary },
 
   // Price-drop badge — below condition badge
   dropBadge: {
@@ -169,7 +177,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: 2,
     borderRadius: Radii.sm,
-    backgroundColor: Colors.success,
+    backgroundColor: c.success,
   },
   dropText: {
     ...Typography.caption,
@@ -187,7 +195,7 @@ const styles = StyleSheet.create({
     width: Spacing['2xl'] + Spacing.xs,
     height: Spacing['2xl'] + Spacing.xs,
     borderRadius: Spacing.md + 2,
-    backgroundColor: Colors.overlay,
+    backgroundColor: c.overlay,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -199,7 +207,7 @@ const styles = StyleSheet.create({
   },
   title: {
     ...Typography.bodySmall,
-    color: Colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: '600',
   },
   priceRow: {
@@ -209,12 +217,12 @@ const styles = StyleSheet.create({
   },
   price: {
     ...Typography.priceSm,
-    color: Colors.navy,
+    color: c.navy,
   },
   previousPrice: {
     ...Typography.caption,
     fontSize: 11,
-    color: Colors.textTertiary,
+    color: c.textTertiary,
     textDecorationLine: 'line-through',
   },
   ratingRow: {
@@ -225,8 +233,9 @@ const styles = StyleSheet.create({
   reviewCount: {
     ...Typography.caption,
     fontSize: 11,
-    color: Colors.textTertiary,
+    color: c.textTertiary,
     marginLeft: 3,
     textTransform: 'none',
   },
-});
+  });
+}

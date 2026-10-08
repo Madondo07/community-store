@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, ImageStyle, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { ImageOff } from 'lucide-react-native';
 
-import { Colors } from '@/constants/theme';
+import { useAppTheme } from '@/context/ThemeContext';
 
 interface ListingImageProps {
   /** First image URL for a listing — pass `listing.images[0]`, may be undefined for a listing with no photos. */
@@ -20,11 +20,13 @@ interface ListingImageProps {
  */
 export default function ListingImage({ uri, style, iconSize = 28 }: ListingImageProps) {
   const [failed, setFailed] = useState(false);
+  const { colors } = useAppTheme();
+  const placeholderStyle = useMemo(() => ({ backgroundColor: colors.surfaceAlt }), [colors]);
 
   if (!uri || failed) {
     return (
-      <View style={[styles.placeholder, style]}>
-        <ImageOff size={iconSize} color={Colors.textTertiary} />
+      <View style={[styles.placeholder, placeholderStyle, style]}>
+        <ImageOff size={iconSize} color={colors.textTertiary} />
       </View>
     );
   }
@@ -41,7 +43,6 @@ export default function ListingImage({ uri, style, iconSize = 28 }: ListingImage
 
 const styles = StyleSheet.create({
   placeholder: {
-    backgroundColor: Colors.surfaceAlt,
     alignItems: 'center',
     justifyContent: 'center',
   },

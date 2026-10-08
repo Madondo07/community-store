@@ -20,6 +20,7 @@ import { useApp } from "@/context/AppContext";
 import { useResponsive } from "@/hooks/useResponsive";
 import { supabase } from "@/lib/supabase";
 import type { UserProfile } from "@/types";
+import { autoSuffixStudentEmail } from "@/utils/email";
 
 export default function SignInScreen() {
   const { dispatch } = useApp();
@@ -159,7 +160,7 @@ export default function SignInScreen() {
                 placeholder="Email Address"
                 value={email}
                 onChangeText={(v) => {
-                  setEmail(v);
+                  setEmail(autoSuffixStudentEmail(v, email));
                   setError("");
                 }}
                 keyboardType="email-address"

@@ -3,6 +3,8 @@ export { default as AuthInput } from './AuthInput';
 export { default as Button } from './Button';
 export { default as CategoryChip } from './CategoryChip';
 export { default as ContentContainer } from './ContentContainer';
+export { ConfirmProvider, useConfirm } from './ConfirmDialog';
+export type { ConfirmOptions } from './ConfirmDialog';
 export { default as DateTimeField } from './DateTimeField';
 export { default as IconButton } from './IconButton';
 export { default as ListingCard } from './ListingCard';

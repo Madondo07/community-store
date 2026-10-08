@@ -1,25 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Tabs } from 'expo-router';
 import { Home, Megaphone, MessageCircle, Search, User } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { ResponsiveTabBar } from '@/components/ui';
 import { Colors } from '@/constants/theme';
-import { useApp } from '@/context/AppContext';
+import { useNotifications } from '@/context/NotificationsContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { getUnreadNotificationCount } from '@/lib/api/notifications';
 
 export default function TabsLayout() {
-  const { state } = useApp();
   const { sidebarOffset, useSidebarNav } = useResponsive();
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-
-  useEffect(() => {
-    const uid = state.user?.id;
-    (uid ? getUnreadNotificationCount(uid) : Promise.resolve(0))
-      .then(setUnreadNotificationCount)
-      .catch((err) => console.warn('Failed to load unread count:', err));
-  }, [state.user]);
+  // Live (Realtime) — updates the Messages badge the moment a message
+  // notification arrives, without opening the chat.
+  const { notifications } = useNotifications();
+  const unreadMessageCount = notifications.filter((n) => n.type === 'message' && !n.is_read).length;
 
   return (
     <View style={[styles.root, { paddingLeft: sidebarOffset }]}>
@@ -57,7 +51,7 @@ export default function TabsLayout() {
           options={{
             title: 'Messages',
             tabBarIcon: ({ color, size }) => <MessageCircle size={size} color={color} />,
-            tabBarBadge: unreadNotificationCount > 0 ? unreadNotificationCount : undefined,
+            tabBarBadge: unreadMessageCount > 0 ? unreadMessageCount : undefined,
             // Hide from mobile bottom bar — accessible via header icon & sidebar on web
             tabBarItemStyle: useSidebarNav ? undefined : { display: 'none' },
           }}

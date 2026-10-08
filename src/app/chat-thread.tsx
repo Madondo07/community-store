@@ -17,7 +17,7 @@ import { Avatar, IconButton, ListingImage } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
-import { createNotification } from '@/lib/api/notifications';
+import { markConversationNotificationsRead } from '@/lib/api/notifications';
 import { supabase } from '@/lib/supabase';
 import { getVerifiedBadge } from '@/utils/verification';
 import type { UserProfile } from '@/types';
@@ -127,6 +127,7 @@ export default function ChatThreadScreen() {
         .eq('conversation_id', conversationId)
         .neq('sender_id', uid)
         .is('read_at', null);
+      markConversationNotificationsRead(uid, conversationId).catch(() => {});
     })();
 
     // Subscribe to new messages via Supabase Realtime
@@ -145,13 +146,16 @@ export default function ChatThreadScreen() {
           const mapped = mapMessages([newMsg]);
           setMessages((prev) => GiftedChat.append(prev, mapped));
 
-          // Auto-mark as read if it's from the other user
+          // Auto-mark as read if it's from the other user — and clear the
+          // notification the trigger just created for it, since they're
+          // looking at the thread right now.
           if (newMsg.sender_id !== uid) {
             supabase
               .from('messages')
               .update({ read_at: new Date().toISOString() })
               .eq('id', newMsg.id)
               .then(() => {});
+            markConversationNotificationsRead(uid, conversationId).catch(() => {});
           }
         }
       )
@@ -206,18 +210,12 @@ export default function ChatThreadScreen() {
         console.warn('Failed to update conversation preview:', convError.message);
       }
 
-      if (params.otherUserId) {
-        createNotification({
-          user_id: params.otherUserId,
-          type: 'message',
-          title: `New message from ${user?.full_name ?? 'a user'}`,
-          body: text,
-          target_screen: 'chat-thread',
-          target_id: conversationId,
-        }).catch((err) => console.warn('Failed to create message notification:', err));
-      }
+      // The recipient's notification is created by the database
+      // (messages_notify_recipient trigger, migration 0016) — it respects
+      // their notification preferences and doesn't depend on this client
+      // surviving past the insert above.
     },
-    [conversationId, uid, params.otherUserId, user?.full_name]
+    [conversationId, uid]
   );
 
   // ── Badge for other user ─────────────────────────────────────────────────

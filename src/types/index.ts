@@ -123,6 +123,21 @@ export interface OrderItem {
   image: string;
 }
 
+/** One sold line item as seen by the seller (from the `my_sales()` function). */
+export interface Sale {
+  item_id: string;
+  order_id: string;
+  listing_id: string | null;
+  title: string;
+  price: number;
+  quantity: number;
+  image: string | null;
+  sold_at: string;
+  order_status: OrderStatus;
+  delivery_method: DeliveryMethod;
+  buyer_name: string | null;
+}
+
 // ─── Notification Types ─────────────────────────────────────────────────────
 
 export type NotificationType = "order" | "message" | "review" | "system" | "bulletin";

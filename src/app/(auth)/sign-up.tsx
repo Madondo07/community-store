@@ -20,6 +20,7 @@ import { useApp } from "@/context/AppContext";
 import { useResponsive } from "@/hooks/useResponsive";
 import { supabase } from "@/lib/supabase";
 import type { UserProfile } from "@/types";
+import { autoSuffixStudentEmail } from "@/utils/email";
 
 // No role picker here — every sign-up becomes a student (the DB trigger
 // handle_new_user() defaults role to 'student' when none is passed in
@@ -166,7 +167,7 @@ export default function RoleSelectScreen() {
                 placeholder="Email Address"
                 value={email}
                 onChangeText={(v) => {
-                  setEmail(v);
+                  setEmail(autoSuffixStudentEmail(v, email));
                   setError("");
                 }}
                 keyboardType="email-address"

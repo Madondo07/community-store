@@ -48,19 +48,9 @@ export default function CheckoutScreen() {
         target_id: order.id,
       }).catch((err) => console.warn('Failed to create order notification:', err));
 
-      // Notify each distinct seller involved in this order of the new sale.
-      const sellerIds = new Set(state.cart.map((item) => item.listing.seller_id));
-      sellerIds.forEach((sellerId) => {
-        if (sellerId === state.user!.id) return;
-        createNotification({
-          user_id: sellerId,
-          type: 'order',
-          title: 'New sale!',
-          body: `One of your listings was just purchased in order ${order.id}.`,
-          target_screen: 'order-confirmed',
-          target_id: order.id,
-        }).catch((err) => console.warn('Failed to create seller notification:', err));
-      });
+      // Sellers are notified by the database (order_items_notify_seller
+      // trigger, migration 0017) — a buyer's client can't reliably insert a
+      // notification for someone else's account.
 
       router.replace(`/order-confirmed?orderId=${order.id}`);
     } catch (err: any) {

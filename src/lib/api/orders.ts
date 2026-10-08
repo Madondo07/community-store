@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { CartItem, DeliveryMethod, Order, OrderStatus, PaymentMethod } from '@/types';
+import type { CartItem, DeliveryMethod, Order, OrderStatus, PaymentMethod, Sale } from '@/types';
 
 import { unwrap, unwrapNullable } from './_shared';
 
@@ -71,6 +71,17 @@ export async function createOrder(input: {
   const created = await getOrder(order.id);
   if (!created) throw new Error('Order was created but could not be re-fetched.');
   return created;
+}
+
+/**
+ * The signed-in seller's sold items, newest first. Goes through the
+ * `my_sales()` function (migration 0017) because orders/order_items RLS only
+ * lets a buyer read their own rows.
+ */
+export async function getMySales(): Promise<Sale[]> {
+  const res = await supabase.rpc('my_sales');
+  if (res.error) throw new Error(res.error.message);
+  return (res.data ?? []) as Sale[];
 }
 
 /** Admin-only under current RLS. No buyer-side cancel flow yet — no screen calls for it. */

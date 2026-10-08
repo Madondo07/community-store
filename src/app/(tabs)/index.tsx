@@ -1,6 +1,6 @@
 import { FlashList } from '@shopify/flash-list';
 import { router } from 'expo-router';
-import { Bell, MessageCircle, Monitor, Moon, PlusCircle, ShoppingBag, Sun } from 'lucide-react-native';
+import { Bell, PlusCircle, ShoppingBag } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -15,28 +15,26 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryChip, IconButton, ListingCard, SearchBar } from '@/components/ui';
-import { FontFamily, Radii, Spacing, Typography } from '@/constants/theme';
+import { Colors, FontFamily, Radii, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
+import { useNotifications } from '@/context/NotificationsContext';
 import { useAppTheme } from '@/context/ThemeContext';
 import { CATEGORIES } from '@/data/mockData';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getListings } from '@/lib/api/listings';
-import { getUnreadNotificationCount } from '@/lib/api/notifications';
 import type { Listing } from '@/types';
 import { canPostListings } from '@/utils/verification';
 
-const THEME_CYCLE = ['system', 'light', 'dark'] as const;
-
 export default function HomeScreen() {
   const { state, cartItemCount } = useApp();
+  const { unreadCount } = useNotifications();
   const { gridColumns, isDesktop, isWeb, contentMaxWidth, useSidebarNav } = useResponsive();
-  const { colors, themePreference, setThemePreference } = useAppTheme();
+  const { colors } = useAppTheme();
   const styles = useMemoStyles(colors);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchValue, setSearchValue] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [listings, setListings] = useState<Listing[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
 
   const userId = state.user?.id;
 
@@ -53,13 +51,6 @@ export default function HomeScreen() {
     loadListings();
   }, [loadListings]);
 
-  useEffect(() => {
-    const uid = state.user?.id;
-    (uid ? getUnreadNotificationCount(uid) : Promise.resolve(0))
-      .then(setUnreadCount)
-      .catch((err) => console.warn('Failed to load unread count:', err));
-  }, [state.user]);
-
   const gridData = useMemo(() => {
     return listings.filter(
       (l) => selectedCategory === 'all' || l.category === selectedCategory
@@ -71,14 +62,6 @@ export default function HomeScreen() {
     await loadListings();
     setRefreshing(false);
   }, [loadListings]);
-
-  const cycleTheme = useCallback(() => {
-    const currentIndex = THEME_CYCLE.indexOf(themePreference);
-    const next = THEME_CYCLE[(currentIndex + 1) % THEME_CYCLE.length];
-    setThemePreference(next);
-  }, [themePreference, setThemePreference]);
-
-  const ThemeIcon = themePreference === 'system' ? Monitor : themePreference === 'light' ? Sun : Moon;
 
   const px = isDesktop ? Spacing['2xl'] : Spacing.lg;
 
@@ -106,10 +89,9 @@ export default function HomeScreen() {
             <Text style={styles.headerTitle}>Swych</Text>
           </View>
         )}
+        {/* Home's three actions: Sell, Cart, Notifications. (Messages is the
+            tab; the theme toggle lives in Settings.) */}
         <View style={styles.headerActions}>
-          <IconButton onPress={cycleTheme} style={styles.iconBtn} accessibilityLabel="Toggle theme">
-            <ThemeIcon size={Spacing.xl} color={colors.navy} />
-          </IconButton>
           <IconButton onPress={() => {
             if (!canPostListings(state.user)) {
               Alert.alert('Restricted', 'Your vendor account is pending verification.');
@@ -120,18 +102,6 @@ export default function HomeScreen() {
             <PlusCircle size={Spacing.xl} color={colors.navy} />
             {isDesktop && <Text style={styles.iconBtnLabel}>Sell</Text>}
           </IconButton>
-          {!useSidebarNav && (
-            <IconButton onPress={() => {
-              if (!canPostListings(state.user)) {
-                Alert.alert('Restricted', 'Your vendor account is pending verification.');
-                return;
-              }
-              router.push('/(tabs)/messages');
-            }} style={styles.iconBtn} accessibilityLabel="Messages">
-              <MessageCircle size={Spacing.xl} color={colors.navy} />
-              {unreadCount > 0 && <View style={styles.dot} />}
-            </IconButton>
-          )}
           <IconButton onPress={() => router.push('/cart')} style={styles.iconBtn} accessibilityLabel="Cart">
             <ShoppingBag size={Spacing.xl} color={colors.navy} />
             {cartItemCount > 0 && (
@@ -173,7 +143,7 @@ export default function HomeScreen() {
         {selectedCategory === 'all' ? 'All Listings' : CATEGORIES.find(c => c.key === selectedCategory)?.label ?? 'Listings'}
       </Text>
     </View>
-  ), [px, useSidebarNav, isDesktop, searchValue, selectedCategory, state.user, cartItemCount, unreadCount, styles, colors, themePreference, cycleTheme]);
+  ), [px, useSidebarNav, isDesktop, searchValue, selectedCategory, state.user, cartItemCount, unreadCount, styles, colors]);
 
   return (
     <SafeAreaView style={styles.safe} edges={isWeb ? [] : ['top']}>
@@ -220,6 +190,14 @@ function useMemoStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
         brandLogo: { width: 24, height: 24 },
         headerActions: { flexDirection: 'row', alignItems: 'center', gap: 2 },
         iconBtn: { padding: Spacing.xs, position: 'relative' as const },
+        cartBadge: {
+          position: 'absolute', top: 0, right: -2,
+          backgroundColor: colors.danger, borderRadius: Spacing.sm,
+          minWidth: Spacing.lg, height: Spacing.lg, alignItems: 'center', justifyContent: 'center',
+          paddingHorizontal: 3,
+        },
+        cartBadgeText: { color: Colors.textInverse, fontSize: 9, fontWeight: '700' },
+        dot: { position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: Spacing.xs, backgroundColor: colors.danger },
         iconBtnPill: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -230,14 +208,6 @@ function useMemoStyles(colors: ReturnType<typeof useAppTheme>['colors']) {
           paddingVertical: Spacing.xs,
         },
         iconBtnLabel: { ...Typography.bodySmall, color: colors.navy, fontWeight: '600' },
-        cartBadge: {
-          position: 'absolute', top: 0, right: -2,
-          backgroundColor: colors.danger, borderRadius: Spacing.sm,
-          minWidth: Spacing.lg, height: Spacing.lg, alignItems: 'center', justifyContent: 'center',
-          paddingHorizontal: 3,
-        },
-        cartBadgeText: { color: colors.textInverse, fontSize: 9, fontWeight: '700' },
-        dot: { position: 'absolute', top: 2, right: 2, width: 7, height: 7, borderRadius: Spacing.xs, backgroundColor: colors.danger },
         chipRow: { paddingBottom: Spacing.md, gap: Spacing.sm },
         sectionTitle: { ...Typography.titleSm, color: colors.textPrimary, marginBottom: Spacing.sm },
         gridCell: { flex: 1, paddingHorizontal: Spacing.xs },

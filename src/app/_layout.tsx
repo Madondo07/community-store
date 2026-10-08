@@ -7,7 +7,9 @@ import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { ConfirmProvider } from "@/components/ui";
 import { AppProvider } from "@/context/AppContext";
+import { NotificationsProvider } from "@/context/NotificationsContext";
 import { ThemeProvider, useAppTheme } from "@/context/ThemeContext";
 
 function RootLayoutNav() {
@@ -62,7 +64,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AppProvider>
-          <RootLayoutNav />
+          <NotificationsProvider>
+            <ConfirmProvider>
+              <RootLayoutNav />
+            </ConfirmProvider>
+          </NotificationsProvider>
         </AppProvider>
       </ThemeProvider>
     </SafeAreaProvider>

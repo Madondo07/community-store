@@ -1,20 +1,16 @@
-import React from 'react';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   Bookmark,
   CheckCircle,
-  Newspaper,
   Pencil,
-  PlusCircle,
   Settings,
   ShieldCheck,
   Store,
   Trash2,
 } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,23 +19,37 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Avatar, Button, IconButton, ListingImage, StatusBadge, VerifiedBadge } from '@/components/ui';
+import { Avatar, Button, IconButton, ListingImage, StatusBadge, Toast, VerifiedBadge, useConfirm } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
+import { useToast } from '@/hooks/useToast';
 import { useResponsive } from '@/hooks/useResponsive';
 import { deleteListing, getListingsByIds, getListingsBySeller } from '@/lib/api/listings';
-import { getMyOrders } from '@/lib/api/orders';
-import { supabase } from '@/lib/supabase';
-import type { Listing, Order } from '@/types';
-import { canPostListings } from '@/utils/verification';
+import { getMyOrders, getMySales } from '@/lib/api/orders';
+import type { Listing, Order, Sale } from '@/types';
 
-const TABS = ['Listings', 'Posts', 'Orders', 'Saved'] as const;
+const TABS = ['Listings', 'Sales', 'Orders', 'Saved'] as const;
 
 export default function ProfileScreen() {
   const { state, dispatch } = useApp();
+  const confirm = useConfirm();
+  const { toast, showToast, hideToast } = useToast();
   const { user } = state;
   const { isDesktop, contentMaxWidth, isWeb } = useResponsive();
-  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>('Listings');
+  // `?tab=Sales` lets the "New sale" notification land straight on the Sales tab.
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>(
+    TABS.find((t) => t === tabParam) ?? 'Listings',
+  );
+  const [sales, setSales] = useState<Sale[]>([]);
+
+  // The tab screen stays mounted, so a notification tap while Profile is
+  // already open changes the param without remounting — follow it. Deferred a
+  // microtask so it isn't a synchronous setState-in-effect.
+  useEffect(() => {
+    const requested = TABS.find((t) => t === tabParam);
+    if (requested) Promise.resolve().then(() => setActiveTab(requested));
+  }, [tabParam]);
   const [userListings, setUserListings] = useState<Listing[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [wishlistListings, setWishlistListings] = useState<Listing[]>([]);
@@ -53,10 +63,12 @@ export default function ProfileScreen() {
     Promise.all([
       getListingsBySeller(user.id, { status: null }),
       getMyOrders(),
+      getMySales(),
     ])
-      .then(([listings, myOrders]) => {
+      .then(([listings, myOrders, mySales]) => {
         setUserListings(listings);
         setOrders(myOrders);
+        setSales(mySales);
       })
       .catch((err) => console.warn('Failed to load profile data:', err))
       .finally(() => setLoading(false));
@@ -70,26 +82,21 @@ export default function ProfileScreen() {
       .catch((err) => console.warn('Failed to load saved listings:', err));
   }, [state.wishlist]);
 
-  const handleDeleteListing = (listing: Listing) => {
-    Alert.alert(
-      'Delete listing?',
-      `"${listing.title}" will be permanently deleted. This can't be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteListing(listing.id);
-              setUserListings((prev) => prev.filter((l) => l.id !== listing.id));
-            } catch (err: any) {
-              Alert.alert('Error', err.message ?? 'Could not delete listing.');
-            }
-          },
-        },
-      ],
-    );
+  const handleDeleteListing = async (listing: Listing) => {
+    const confirmed = await confirm({
+      title: 'Delete listing?',
+      message: `"${listing.title}" will be permanently deleted. This can't be undone.`,
+      confirmLabel: 'Delete Listing',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    try {
+      await deleteListing(listing.id);
+      setUserListings((prev) => prev.filter((l) => l.id !== listing.id));
+      showToast('Listing deleted.');
+    } catch (err: any) {
+      showToast(err.message ?? 'Could not delete listing.', 'error');
+    }
   };
 
   if (!user) {
@@ -131,6 +138,26 @@ export default function ProfileScreen() {
         ) : (
           <View style={styles.emptyTab}><Text style={styles.emptyTabText}>No listings yet</Text></View>
         );
+      case 'Sales':
+        return sales.length > 0 ? (
+          <View style={isDesktop ? styles.listingsGrid : undefined}>
+            {sales.map((sale) => (
+              <View key={sale.item_id} style={[styles.listingRow, isDesktop && styles.listingRowDesktop]}>
+                <ListingImage uri={sale.image} style={styles.listingThumb} iconSize={18} />
+                <View style={styles.listingInfo}>
+                  <Text style={styles.listingTitle} numberOfLines={1}>{sale.title}</Text>
+                  <Text style={styles.listingPrice}>R{(sale.price * sale.quantity).toLocaleString()}</Text>
+                  <Text style={styles.saleMeta} numberOfLines={1}>
+                    {sale.buyer_name ?? 'A buyer'} · {new Date(sale.sold_at).toLocaleDateString('en-ZA')} · {sale.delivery_method === 'vendor_delivery' ? 'Delivery' : 'Campus pickup'}
+                  </Text>
+                </View>
+                <StatusBadge status={sale.order_status === 'confirmed' ? 'confirmed' : 'pending'} />
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptyTab}><Text style={styles.emptyTabText}>No sales yet</Text></View>
+        );
       case 'Orders':
         return orders.length > 0 ? (
           <View style={isDesktop ? styles.ordersGrid : undefined}>
@@ -157,8 +184,6 @@ export default function ProfileScreen() {
         ) : (
           <View style={styles.emptyTab}><Text style={styles.emptyTabText}>No orders yet</Text></View>
         );
-      case 'Posts':
-        return <View style={styles.emptyTab}><Newspaper size={48} color={Colors.textTertiary} /><Text style={styles.emptyTabText}>No posts yet</Text></View>;
       case 'Saved':
         return wishlistListings.length > 0 ? (
           <View style={isDesktop ? styles.listingsGrid : undefined}>
@@ -188,8 +213,10 @@ export default function ProfileScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Profile</Text>
+            {/* Sell / Cart / Notifications live on Home; Sign Out and the
+                theme toggle live inside Settings. */}
             <IconButton onPress={() => router.push('/settings')} accessibilityLabel="Settings">
-              <Settings size={24} color={Colors.textSecondary} />
+              <Settings size={24} color={Colors.navy} />
             </IconButton>
           </View>
 
@@ -208,21 +235,6 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            {/* Sell Button */}
-            <Button
-              title="Sell an Item"
-              onPress={() => {
-                if (!canPostListings(user)) {
-                  Alert.alert('Restricted', 'Your vendor account is pending verification. You cannot post listings yet.');
-                  return;
-                }
-                router.push('/new-listing');
-              }}
-              fullWidth={!isDesktop}
-              size="lg"
-              icon={<PlusCircle size={20} color={Colors.textInverse} />}
-              style={isDesktop ? { minWidth: 200 } : undefined}
-            />
           </View>
 
           {/* Become a Vendor — students only. Not required to sell (students
@@ -265,21 +277,9 @@ export default function ProfileScreen() {
             {loading ? <ActivityIndicator size="large" color={Colors.navy} /> : renderTabContent()}
           </View>
 
-          {/* Extra Actions */}
-          <View style={[styles.extraActions, isDesktop && styles.extraActionsDesktop]}>
-            {user.role === 'admin' && (
-              <Button title="Admin Dashboard" variant="secondary" onPress={() => router.push('/admin-dashboard')} fullWidth={!isDesktop} />
-            )}
-            <Button
-              title="Sign Out"
-              variant="secondary"
-              onPress={async () => { await supabase.auth.signOut(); dispatch({ type: 'SIGN_OUT' }); router.replace('/(auth)'); }}
-              fullWidth={!isDesktop}
-              style={{ borderColor: Colors.danger }}
-            />
-          </View>
         </View>
       </ScrollView>
+      <Toast message={toast?.message ?? null} variant={toast?.variant} onHide={hideToast} />
     </SafeAreaView>
   );
 }
@@ -310,6 +310,7 @@ const styles = StyleSheet.create({
   listingInfo: { flex: 1, marginLeft: Spacing.md },
   listingTitle: { ...Typography.titleSm, color: Colors.textPrimary },
   listingPrice: { ...Typography.priceSm, color: Colors.navy, marginTop: 2 },
+  saleMeta: { ...Typography.bodySmall, color: Colors.textTertiary, marginTop: 2 },
   listingActions: { flexDirection: 'row', gap: Spacing.md },
   ordersGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   orderCard: { backgroundColor: Colors.surface, borderRadius: Radii.md, padding: Spacing.lg, marginBottom: Spacing.md, ...Shadows.sm, minWidth: 280, flexGrow: 1 },
@@ -320,6 +321,4 @@ const styles = StyleSheet.create({
   emptyTab: { alignItems: 'center', paddingVertical: Spacing['3xl'], gap: Spacing.md },
   emptyTabText: { ...Typography.body, color: Colors.textTertiary },
   emptyTabHint: { ...Typography.bodySmall, color: Colors.textTertiary, textAlign: 'center' },
-  extraActions: { marginTop: Spacing['2xl'], paddingTop: Spacing.xl, borderTopWidth: 1, borderTopColor: Colors.border, gap: Spacing.md },
-  extraActionsDesktop: { flexDirection: 'row', flexWrap: 'wrap' },
 });

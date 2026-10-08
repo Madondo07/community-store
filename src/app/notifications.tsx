@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -6,12 +6,7 @@ import { ArrowLeft, Bell, Megaphone, MessageCircle, Package, Star } from 'lucide
 
 import { IconButton } from '@/components/ui';
 import { Colors, Spacing, Typography } from '@/constants/theme';
-import { useApp } from '@/context/AppContext';
-import {
-  getMyNotifications,
-  markAllNotificationsRead,
-  markNotificationRead,
-} from '@/lib/api/notifications';
+import { useNotifications } from '@/context/NotificationsContext';
 import type { Notification, NotificationType } from '@/types';
 
 const TYPE_ICONS: Record<NotificationType, typeof Package> = {
@@ -23,40 +18,20 @@ const TYPE_ICONS: Record<NotificationType, typeof Package> = {
 };
 
 export default function NotificationsScreen() {
-  const { state } = useApp();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Live list: NotificationsProvider keeps a Realtime subscription open, so
+  // a notification created while this screen is showing appears at the top
+  // immediately.
+  const { notifications, loading, markRead, markAllRead } = useNotifications();
 
-  const load = useCallback(() => {
-    getMyNotifications()
-      .then(setNotifications)
-      .catch((err) => console.warn('Failed to load notifications:', err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const handleMarkAllRead = async () => {
-    if (!state.user) return;
-    try {
-      await markAllNotificationsRead(state.user.id);
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-    } catch (err) {
-      console.warn('Failed to mark all read:', err);
-    }
+  const handleMarkAllRead = () => {
+    markAllRead();
   };
 
-  const handlePress = async (item: Notification) => {
-    if (!item.is_read) {
-      try {
-        await markNotificationRead(item.id);
-        setNotifications((prev) => prev.map((n) => (n.id === item.id ? { ...n, is_read: true } : n)));
-      } catch (err) {
-        console.warn('Failed to mark notification read:', err);
-      }
-    }
+  const handlePress = (item: Notification) => {
+    if (!item.is_read) markRead(item.id);
+    // A sale notice opens the seller's Sales tab (order_items_notify_seller
+    // trigger sets target_screen = 'sales').
+    if (item.target_screen === 'sales') router.push('/(tabs)/profile?tab=Sales');
   };
 
   return (

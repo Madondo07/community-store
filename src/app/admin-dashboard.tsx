@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { CheckCircle2, FileText, LogOut, Megaphone, Phone, PlusCircle, ShieldAlert, ShieldCheck, Store } from 'lucide-react-native';
+import { CheckCircle2, FileText, Megaphone, Phone, PlusCircle, Settings, ShieldAlert, ShieldCheck, Store } from 'lucide-react-native';
 
-import { Avatar, Button, IconButton, ListingImage, StatCard, StatusBadge } from '@/components/ui';
+import { Avatar, Button, IconButton, ListingImage, StatCard, StatusBadge, useConfirm } from '@/components/ui';
 import { Colors, Radii, Shadows, Spacing, Typography } from '@/constants/theme';
 import { useApp } from '@/context/AppContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -12,11 +12,11 @@ import { createNotification } from '@/lib/api/notifications';
 import { approveVendor, getPendingVendors, rejectVendor, setUserSuspended } from '@/lib/api/profiles';
 import { getAdminStats, getReports, updateReportStatus } from '@/lib/api/reports';
 import { getVerificationDocSignedUrl } from '@/lib/api/storage';
-import { supabase } from '@/lib/supabase';
 import type { AdminStats, Report, UserProfile } from '@/types';
 
 export default function AdminDashboardScreen() {
-  const { state, dispatch } = useApp();
+  const { state } = useApp();
+  const confirm = useConfirm();
   const { isDesktop } = useResponsive();
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
@@ -83,7 +83,7 @@ export default function AdminDashboardScreen() {
       await createNotification({
         user_id: targetId,
         type: 'system',
-        title: 'Warning from Community Store',
+        title: 'Warning from Swych',
         body: `You've received a warning regarding a report: "${report.reason}"`,
       });
       await updateReportStatus(report.id, 'reviewed');
@@ -95,41 +95,35 @@ export default function AdminDashboardScreen() {
     }
   };
 
-  const handleSuspend = (report: Report) => {
+  const handleSuspend = async (report: Report) => {
     const targetId = resolveTargetUserId(report);
     if (!targetId) {
       Alert.alert('Error', 'No user to suspend on this report.');
       return;
     }
-    Alert.alert(
-      'Suspend this user?',
-      'They will be blocked from creating new listings. Existing listings and messages are unaffected.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Suspend',
-          style: 'destructive',
-          onPress: async () => {
-            setActingOn(report.id);
-            try {
-              await setUserSuspended(targetId, true);
-              await createNotification({
-                user_id: targetId,
-                type: 'system',
-                title: 'Account suspended',
-                body: `Your account has been suspended following a report: "${report.reason}"`,
-              });
-              await updateReportStatus(report.id, 'reviewed');
-              setReports((prev) => prev.filter((r) => r.id !== report.id));
-            } catch (err: any) {
-              Alert.alert('Error', err.message ?? 'Could not suspend user.');
-            } finally {
-              setActingOn(null);
-            }
-          },
-        },
-      ],
-    );
+    const confirmed = await confirm({
+      title: 'Suspend this user?',
+      message: 'They will be blocked from creating new listings. Existing listings and messages are unaffected.',
+      confirmLabel: 'Suspend User',
+      destructive: true,
+    });
+    if (!confirmed) return;
+    setActingOn(report.id);
+    try {
+      await setUserSuspended(targetId, true);
+      await createNotification({
+        user_id: targetId,
+        type: 'system',
+        title: 'Account suspended',
+        body: `Your account has been suspended following a report: "${report.reason}"`,
+      });
+      await updateReportStatus(report.id, 'reviewed');
+      setReports((prev) => prev.filter((r) => r.id !== report.id));
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Could not suspend user.');
+    } finally {
+      setActingOn(null);
+    }
   };
 
   const handleViewDocument = async (path: string) => {
@@ -182,12 +176,6 @@ export default function AdminDashboardScreen() {
     );
   }
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    dispatch({ type: 'SIGN_OUT' });
-    router.replace('/(auth)');
-  };
-
   const pendingActionCount = pendingVendors.length + reports.length;
 
   return (
@@ -205,8 +193,9 @@ export default function AdminDashboardScreen() {
             <Store size={16} color={Colors.navy} />
             {isDesktop && <Text style={styles.visitStoreText}>Visit Store</Text>}
           </IconButton>
-          <IconButton onPress={handleSignOut} style={styles.iconBtn} accessibilityLabel="Sign out">
-            <LogOut size={20} color={Colors.textSecondary} />
+          {/* Sign Out lives in Settings only — this just gets admins there. */}
+          <IconButton onPress={() => router.push('/settings')} style={styles.iconBtn} accessibilityLabel="Settings">
+            <Settings size={20} color={Colors.textSecondary} />
           </IconButton>
         </View>
       </View>

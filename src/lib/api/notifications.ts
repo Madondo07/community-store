@@ -40,6 +40,18 @@ export async function markAllNotificationsRead(userId: string): Promise<void> {
   if (res.error) throw new Error(res.error.message);
 }
 
+/** Clears the unread message notifications for one chat — used while that chat is open. */
+export async function markConversationNotificationsRead(userId: string, conversationId: string): Promise<void> {
+  const res = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('user_id', userId)
+    .eq('type', 'message')
+    .eq('target_id', conversationId)
+    .eq('is_read', false);
+  if (res.error) throw new Error(res.error.message);
+}
+
 export async function createNotification(input: {
   user_id: string;
   type: NotificationType;
@@ -47,7 +59,15 @@ export async function createNotification(input: {
   body: string;
   target_screen?: string;
   target_id?: string;
-}): Promise<Notification> {
-  const res = await supabase.from('notifications').insert(input).select('*').single();
-  return unwrap<Notification>(res as any);
+}): Promise<void> {
+  // Deliberately NO `.select()` on the insert. Asking Postgres to RETURN the
+  // new row makes RLS also check the SELECT policy, and notifications_select_own
+  // only lets you read rows where user_id = YOUR id — so inserting a
+  // notification for ANOTHER user (a buyer notifying a seller, a reviewer
+  // notifying the reviewed seller) failed with "new row violates row-level
+  // security policy" even though the INSERT policy allows it. Those errors
+  // were swallowed by the fire-and-forget callers, so the other user simply
+  // never got anything. Nothing uses the returned row.
+  const res = await supabase.from('notifications').insert(input);
+  if (res.error) throw new Error(res.error.message);
 }
