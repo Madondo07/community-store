@@ -1,8 +1,8 @@
+import { router, useFocusEffect } from 'expo-router';
+import { Bell, Briefcase, Building2, Calendar, MapPin, Megaphone, Pencil, PlusCircle, Search, Trash2, Wrench } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useFocusEffect } from 'expo-router';
-import { Bell, Briefcase, Building2, Calendar, MapPin, Megaphone, Pencil, PlusCircle, Search, Trash2, Wrench } from 'lucide-react-native';
 
 import { Button, CategoryChip } from '@/components/ui';
 import { Colors, Radii, Spacing, Typography } from '@/constants/theme';
@@ -125,16 +125,17 @@ export default function BulletinBoardTab() {
           )}
         </View>
 
-        {/* Categories */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.chipRow, { paddingHorizontal: padding }]}
-        >
-          {BULLETIN_CATEGORIES.map((cat) => (
-            <CategoryChip key={cat.key} label={cat.label} selected={selectedCat === cat.key} onPress={() => setSelectedCat(cat.key)} />
-          ))}
-        </ScrollView>
+      {/* Categories */}
+<ScrollView
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  style={{ flexGrow: 0 }}
+  contentContainerStyle={[styles.chipRow, { paddingHorizontal: padding }]}
+>
+  {BULLETIN_CATEGORIES.map((cat) => (
+    <CategoryChip key={cat.key} label={cat.label} selected={selectedCat === cat.key} onPress={() => setSelectedCat(cat.key)} />
+  ))}
+</ScrollView>
 
         {/* Posts */}
         {loading ? (
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: Spacing.md },
   headerTitle: { ...Typography.titleLg, color: Colors.navy },
   headerSub: { ...Typography.caption, color: Colors.teal, textTransform: 'none' as const, marginTop: 2 },
-  chipRow: { paddingBottom: Spacing.md, gap: Spacing.sm },
+chipRow: { paddingBottom: Spacing.md, gap: Spacing.sm, flexDirection: 'row' },
   list: { paddingBottom: Spacing['4xl'] },
   gridRow: { gap: Spacing.md },
   postCard: {
