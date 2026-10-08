@@ -46,6 +46,10 @@ export default function SignInScreen() {
         });
 
       if (authError) {
+        console.error(
+          "Login error:",
+          JSON.stringify(authError, null, 2),
+        );
         setError(authError.message);
         return;
       }
@@ -96,6 +100,7 @@ export default function SignInScreen() {
       // "Visit Store" button there gets them into the regular tabs.
       router.replace(signedInRole === "admin" ? "/admin-dashboard" : "/(tabs)");
     } catch (err: any) {
+      console.error("Login error:", JSON.stringify(err, null, 2));
       setError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
